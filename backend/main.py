@@ -1,1 +1,1 @@
-#
+#main backend file for the COGNIX project. This file is responsible for initializing the backend server, setting up routes, and handling requests. It serves as the entry point for the backend application, coordinating between different modules and ensuring smooth operation of the system.
