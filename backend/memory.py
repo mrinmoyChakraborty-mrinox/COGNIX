@@ -24,7 +24,7 @@ logger = logging.getLogger("cognix.memory")
 # ── Hindsight client (singleton) ────────────────────────────
 
 _hindsight = None
-_bank_cache: set[str] = set()   # tracks which banks we've already created this process
+_bank_cache: set[str] = set()  # tracks which banks we've already created this process
 
 
 def _get_client():
@@ -56,7 +56,8 @@ def _get_client():
 
 # ── Bank provisioning ────────────────────────────────────────
 
-async def ensure_bank(customer_id: str, customer_name: str = "", plan: str = "free") -> None:
+
+async def ensure_bank(customer_id: str, customer_name: str = "") -> None:
     """
     Idempotently ensure a memory bank exists for this customer.
 
@@ -81,10 +82,8 @@ async def ensure_bank(customer_id: str, customer_name: str = "", plan: str = "fr
     # Skepticism=2 → agent trusts what the customer says (don't second-guess).
     # Literalism=2 → agent reads between the lines (good for "same issue as before").
     background = (
-        f"Customer memory bank for {customer_name or customer_id}. "
-        f"Plan: {plan}. "
-        "This bank stores support interaction history, environment details, "
-        "known issues, resolutions that worked, and escalation patterns. "
+        f"Customer support history for {customer_name or customer_id}. "
+        "Tracks past issues, resolutions, and interaction patterns. "
         "Use this context to give informed, personalised support responses "
         "without asking the customer to repeat themselves."
     )
@@ -95,9 +94,9 @@ async def ensure_bank(customer_id: str, customer_name: str = "", plan: str = "fr
             name=customer_name or customer_id,
             background=background,
             disposition={
-                "skepticism": 2,   # 1–5 scale: 2 = mostly trusting
-                "literalism": 2,   # 1–5 scale: 2 = reads context flexibly
-                "empathy": 5,      # 1–5 scale: 5 = maximum empathy
+                "skepticism": 2,  # 1–5 scale: 2 = mostly trusting
+                "literalism": 2,  # 1–5 scale: 2 = reads context flexibly
+                "empathy": 5,  # 1–5 scale: 5 = maximum empathy
             },
         )
         _bank_cache.add(customer_id)
@@ -107,44 +106,39 @@ async def ensure_bank(customer_id: str, customer_name: str = "", plan: str = "fr
         err_str = str(exc).lower()
         if "already exists" in err_str or "conflict" in err_str or "409" in err_str:
             _bank_cache.add(customer_id)
-            logger.info("Memory bank already exists, cached | customer_id=%s", customer_id)
+            logger.info(
+                "Memory bank already exists, cached | customer_id=%s", customer_id
+            )
         else:
             logger.error(
                 "Failed to create memory bank | customer_id=%s | error=%s",
-                customer_id, exc, exc_info=True,
+                customer_id,
+                exc,
+                exc_info=True,
             )
             raise
 
 
 # ── Seed initial memories for a new customer ────────────────
 
+
 async def seed_customer_memory(
     customer_id: str,
     customer_name: str,
-    company: str,
-    plan: str,
     email: str,
 ) -> None:
     """
     Called once after a new customer is created.
     Stores baseline world-facts so the agent has something to work with
     from the very first session, even before the customer contacts support.
-
-    In a real integration you'd call this from POST /customers after
-    the Supabase insert succeeds.
     """
     client = _get_client()
-    await ensure_bank(customer_id, customer_name, plan)
+    await ensure_bank(customer_id, customer_name)
 
     baseline_facts = [
         {
-            "content": f"Customer name: {customer_name}. Company: {company}. Plan: {plan}. Email: {email}.",
+            "content": f"Customer name: {customer_name}. Email: {email}.",
             "context": "customer onboarding",
-        },
-        {
-            "content": f"{customer_name} is on the {plan} plan. "
-                       + ("SLA: 4-hour response." if plan in ("pro", "enterprise") else "SLA: best-effort."),
-            "context": "plan details",
         },
     ]
 
@@ -154,16 +148,20 @@ async def seed_customer_memory(
         client.retain_batch(bank_id=customer_id, items=items)
         logger.info(
             "Seeded baseline memories | customer_id=%s | count=%d",
-            customer_id, len(items),
+            customer_id,
+            len(items),
         )
     except Exception as exc:
         logger.error(
             "Failed to seed memories | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
 
 
 # ── recall ───────────────────────────────────────────────────
+
 
 async def retrieve_memories(
     customer_id: str,
@@ -189,8 +187,8 @@ async def retrieve_memories(
         result = client.recall(
             bank_id=customer_id,
             query=query,
-            budget="mid",          # "low" | "mid" | "high" — mid balances speed vs depth
-            include_entities=True, # pull in entity graph (environment, product versions, etc.)
+            budget="mid",  # "low" | "mid" | "high" — mid balances speed vs depth
+            include_entities=True,  # pull in entity graph (environment, product versions, etc.)
         )
         elapsed_ms = round((time.time() - start) * 1000)
 
@@ -209,7 +207,10 @@ async def retrieve_memories(
 
         logger.info(
             "recall complete | customer_id=%s | query=%r | hits=%d | ms=%d",
-            customer_id, query, len(memories), elapsed_ms,
+            customer_id,
+            query,
+            len(memories),
+            elapsed_ms,
         )
         return memories, elapsed_ms
 
@@ -217,7 +218,9 @@ async def retrieve_memories(
         elapsed_ms = round((time.time() - start) * 1000)
         logger.error(
             "recall failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return [], elapsed_ms
 
@@ -238,6 +241,7 @@ def _map_memory_type(hindsight_type: str) -> str:
 
 
 # ── retain ───────────────────────────────────────────────────
+
 
 async def save_memory(
     customer_id: str,
@@ -270,19 +274,24 @@ async def save_memory(
         client.retain(**kwargs)
         logger.info(
             "retain complete | customer_id=%s | context=%s | chars=%d",
-            customer_id, context, len(content),
+            customer_id,
+            context,
+            len(content),
         )
         return True
 
     except Exception as exc:
         logger.error(
             "retain failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return False
 
 
 # ── get_all_memories ─────────────────────────────────────────
+
 
 async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
     """
@@ -317,12 +326,15 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
     except Exception as exc:
         logger.error(
             "list_memories failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return []
 
 
 # ── reflect ──────────────────────────────────────────────────
+
 
 async def reflect(customer_id: str, query: str) -> str:
     """
@@ -353,12 +365,15 @@ async def reflect(customer_id: str, query: str) -> str:
     except Exception as exc:
         logger.error(
             "reflect failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return ""
 
 
 # ── retrieval visualisation payload ──────────────────────────
+
 
 def build_retrieval_viz(
     query: str,
@@ -395,8 +410,8 @@ def build_retrieval_viz(
     }
     """
     TYPE_LABELS = {
-        "world_fact":  "Fact",
-        "experience":  "Experience",
+        "world_fact": "Fact",
+        "experience": "Experience",
         "observation": "Observation",
     }
 

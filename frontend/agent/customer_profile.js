@@ -1,0 +1,238 @@
+const API_BASE = 'http://localhost:8000';
+const CUSTOMER_ID = 'cust_demo_001';
+
+(async function init() {
+  showSkeleton(true);
+  try {
+    const [customer, tickets, memories] = await Promise.all([
+      fetchJSON(`/customers/${CUSTOMER_ID}`),
+      fetchJSON(`/customers/${CUSTOMER_ID}/tickets`),
+      fetchJSON(`/customers/${CUSTOMER_ID}/memories`),
+    ]);
+
+    populateHeader(customer);
+    populateKPIs(customer, tickets);
+    populateHealthScore(customer);
+    populateTimeline(tickets);
+    populateMemoryGraph(memories);
+    populateBehavior(memories);
+    populatePreferences(memories);
+    populateFrustrations(memories);
+  } catch (err) {
+    console.error('Failed to load customer profile:', err);
+    showError('Could not connect to the backend. Make sure the API server is running.');
+  } finally {
+    showSkeleton(false);
+  }
+})();
+
+async function fetchJSON(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText} for ${path}`);
+  }
+  return res.json();
+}
+
+function populateHeader(c) {
+  setText('customer-name', c.name);
+  setText('customer-email', c.email);
+  const created = new Date(c.created_at);
+  const years = Math.floor((Date.now() - created) / 31536000000);
+  setText('customer-tenure', `Customer for ${years > 0 ? `${years} year${years > 1 ? 's' : ''}` : 'less than a year'}`);
+  setFrustrationRing(c.frustration_score || 0);
+}
+
+function setFrustrationRing(score) {
+  const ring = document.getElementById('frustration-ring-value');
+  if (ring) ring.textContent = score;
+  const circle = document.querySelector('.frustration-ring circle:last-child');
+  if (circle) {
+    const r = 27;
+    const circ = 2 * Math.PI * r;
+    const offset = circ - (score / 100) * circ;
+    circle.setAttribute('stroke-dasharray', `${circ - offset} ${offset}`);
+  }
+}
+
+function populateKPIs(c, tickets) {
+  const total = tickets.length;
+  const resolved = tickets.filter(t => t.status === 'resolved').length;
+  const rate = total ? Math.round((resolved / total) * 100) : 0;
+  setText('kpi-tickets', total);
+  setText('kpi-resolved-rate', `${rate}%`);
+  setText('kpi-frustration', c.frustration_score || 0);
+}
+
+function populateHealthScore(c) {
+  const score = Math.max(0, Math.min(100, 100 - (c.frustration_score || 0)));
+  setText('health-score-value', score);
+  const fill = document.getElementById('health-score-fill');
+  if (fill) fill.style.width = `${score}%`;
+  const badge = document.getElementById('health-badge');
+  if (!badge) return;
+  if (score >= 70) {
+    badge.className = 'status-badge bg-success/10 text-success';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Healthy';
+  } else if (score >= 40) {
+    badge.className = 'status-badge bg-warning/10 text-warning';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-warning"></span> At Risk';
+  } else {
+    badge.className = 'status-badge bg-danger/10 text-danger';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-danger"></span> Critical';
+  }
+}
+
+function populateTimeline(tickets) {
+  const container = document.getElementById('timeline-container');
+  if (!container) return;
+  if (!tickets.length) {
+    container.innerHTML = '<div class="body-text text-muted-foreground">No tickets yet.</div>';
+    return;
+  }
+  const sorted = [...tickets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  container.innerHTML = sorted.map((t, i) => {
+    const date = formatDate(t.created_at);
+    const isLast = i === sorted.length - 1;
+    const color = t.status === 'resolved' ? 'bg-success' : 'bg-danger';
+    const label = t.status === 'resolved' ? 'resolved' : t.status;
+    return `
+      <div class="flex gap-4">
+        <div class="flex flex-col items-center">
+          <div class="timeline-dot ${color}"></div>
+          ${isLast ? '' : '<div class="timeline-line" style="min-height: 32px"></div>'}
+        </div>
+        <div class="${isLast ? '' : 'pb-5'} flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-xs bg-input text-muted-foreground px-2 py-0.5 rounded-sm">${date}</span>
+            <span class="text-xs px-2 py-0.5 rounded-sm ${t.status === 'resolved' ? 'bg-success text-success-foreground' : 'bg-danger text-danger-foreground'}">${label}</span>
+          </div>
+          <p class="body-text text-foreground font-medium">${escapeHtml(t.subject)}</p>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateMemoryGraph(memories) {
+  const container = document.getElementById('memory-graph-container');
+  if (!container) return;
+  const facts = memories.filter(m => m.memory_type === 'world_fact').slice(0, 3);
+  if (!facts.length) {
+    container.innerHTML = '<div class="body-text text-muted-foreground">No technical context stored.</div>';
+    return;
+  }
+  container.innerHTML = facts.map(f => {
+    const conf = computeConfidence(f);
+    return `
+      <div class="memory-chip">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technical Context</span>
+          <div class="confidence-dots">${renderDots(conf)}</div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="confidence-ring">
+            <div class="confidence-ring-inner">${conf}%</div>
+          </div>
+          <div>
+            <span class="text-base font-semibold text-foreground">${escapeHtml(f.content)}</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+              <span class="text-xs text-muted-foreground">${conf}% confidence</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateBehavior(memories) {
+  const container = document.getElementById('behavior-container');
+  if (!container) return;
+  const obs = memories.filter(m => m.memory_type === 'observation').slice(0, 1);
+  container.innerHTML = obs.length
+    ? `<div class="insight-card" style="background: linear-gradient(135deg, #f0f2f5 0%, #f5f6f8 100%);">
+        <span class="flex-shrink-0" style="font-size: 20px; line-height: 1;">⚡</span>
+        <div class="flex-1 min-w-0">
+          <span class="body-text font-medium text-foreground block">${escapeHtml(obs[0].content)}</span>
+          <div class="flex items-center gap-2 mt-0.5">
+            <div class="confidence-dots">${renderDots(75)}</div>
+            <span class="text-xs text-muted-foreground">75% confidence</span>
+          </div>
+        </div>
+      </div>`
+    : '<div class="body-text text-muted-foreground">No behavior observations recorded.</div>';
+}
+
+function populatePreferences(memories) {
+  const container = document.getElementById('preferences-container');
+  if (!container) return;
+  const likes = memories.filter(m =>
+    m.context === 'preference' || m.content.toLowerCase().includes('prefer')
+  ).slice(0, 1);
+  container.innerHTML = likes.length
+    ? `<div class="insight-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+        <span class="flex-shrink-0" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: var(--color-success); color: white; font-size: 12px; font-weight: 700;">✓</span>
+        <span class="body-text font-medium text-foreground">${escapeHtml(likes[0].content)}</span>
+      </div>`
+    : '<div class="body-text text-muted-foreground">No preferences recorded.</div>';
+}
+
+function populateFrustrations(memories) {
+  const container = document.getElementById('frustrations-container');
+  if (!container) return;
+  const risks = memories.filter(m =>
+    m.memory_type === 'risk_signal' || m.context === 'incident'
+  ).slice(0, 1);
+  container.innerHTML = risks.length
+    ? `<div class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
+        <span class="flex-shrink-0" style="font-size: 18px; line-height: 1;">⚠</span>
+        <div class="flex-1 min-w-0">
+          <span class="body-text font-medium text-foreground block">${escapeHtml(risks[0].content)}</span>
+          <span class="text-xs text-warning font-medium">High priority</span>
+        </div>
+      </div>`
+    : '<div class="body-text text-muted-foreground">No known frustrations.</div>';
+}
+
+function showSkeleton(show) {
+  document.querySelectorAll('.skeleton').forEach(el => el.classList.toggle('hidden', !show));
+  document.querySelectorAll('.skeleton-target').forEach(el => el.classList.toggle('hidden', show));
+}
+
+function showError(msg) {
+  showSkeleton(false);
+  const target = document.querySelector('.skeleton-target');
+  if (target) {
+    target.innerHTML = `<div class="card-base text-center py-10"><div class="text-muted-foreground text-base">⚠ ${escapeHtml(msg)}</div></div>`;
+  }
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderDots(pct) {
+  const active = Math.round(pct / 20);
+  return Array.from({ length: 5 }, (_, i) =>
+    `<div class="confidence-dot${i < active ? ' active' : ''}"></div>`
+  ).join('');
+}
+
+function computeConfidence(memory) {
+  return memory.id ? 80 + (memory.id.charCodeAt(memory.id.length - 1) % 20) : 85;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
