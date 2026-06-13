@@ -37,7 +37,6 @@ async function fetchJSON(path) {
 function populateHeader(c) {
   setText('customer-name', c.name);
   setText('customer-email', c.email);
-  setText('customer-plan', capitalize(c.plan));
   const created = new Date(c.created_at);
   const years = Math.floor((Date.now() - created) / 31536000000);
   setText('customer-tenure', `Customer for ${years > 0 ? `${years} year${years > 1 ? 's' : ''}` : 'less than a year'}`);
@@ -213,11 +212,6 @@ function showError(msg) {
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;
-}
-
-function capitalize(s) {
-  if (!s) return '';
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function formatDate(iso) {

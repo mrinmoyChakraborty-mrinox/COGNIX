@@ -8,11 +8,10 @@ class Customer(BaseModel):
     id: str
     name: str
     email: str
-    company: str
-    plan: Literal["free", "pro", "enterprise"]
     created_at: datetime
     ticket_count: int = 0
     frustration_score: int = 0
+    last_seen: Optional[datetime] = None
 
     @field_validator("email")
     @classmethod
@@ -80,8 +79,6 @@ class SupportResponse(BaseModel):
 class CreateCustomerRequest(BaseModel):
     name: str
     email: str
-    company: str
-    plan: Literal["free", "pro", "enterprise"] = "free"
 
     @field_validator("email")
     @classmethod
