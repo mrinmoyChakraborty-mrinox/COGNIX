@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pydantic-ai
+hindsight-client
+python-dotenv
+supabase
