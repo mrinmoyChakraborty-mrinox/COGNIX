@@ -317,6 +317,11 @@
         .expand-label { cursor: pointer; }
         .expand-icon { transition: transform 0.2s ease; display: inline-flex; }
         .expand-content { display: none; }
+
+        /* Skeleton loading */
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
+        .skeleton { display: block; }
+        .skeleton-bar { background: linear-gradient(90deg, var(--color-muted) 25%, var(--color-border) 50%, var(--color-muted) 75%); background-size: 200px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
       </style>
     </head>
     <body>
@@ -399,143 +404,45 @@
                   <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Accuracy</span>
                 </div>
 
-                <!-- Mrinmoy Row - Expandable -->
-                <div>
-                  <input type="checkbox" id="expand-mrinmoy" class="expand-toggle" />
-                  <label for="expand-mrinmoy" class="expand-label">
-                    <div class="grid px-4 py-3.5 border-b border-border items-center bg-secondary" style="grid-template-columns: 2fr 80px 100px 120px 100px">
-                      <div class="flex items-center gap-3">
-                        <span class="expand-icon" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px; color: var(--color-muted-foreground); margin-right: 4px;">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m6 9l6 6l6-6"></path></svg>
-                        </span>
-                        <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1" class="w-8 h-8 rounded-full" />
-                        <span class="text-sm font-medium text-foreground">Mrinmoy Chakraborty</span>
-                      </div>
-                      <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-warning text-warning-foreground">78</span>
-                      <span class="text-sm text-foreground font-medium">31 <span class="text-muted-foreground font-normal">facts</span></span>
-                      <span class="text-sm text-muted-foreground">14 min ago</span>
-                      <div>
-                        <span class="text-success flex items-center gap-1 text-xs">
-                          <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 13px; height: 13px;" data-icon="check-circle"><svg xmlns="http://www.w3.org/2000/svg" width="13px" height="13px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.6923076923076925"><path d="M21.801 10A10 10 0 1 1 17 3.335"></path><path d="m9 11l3 3L22 4"></path></g></svg></span>
-                          Verified
-                        </span>
-                      </div>
+                <!-- Skeleton rows (shown during loading) -->
+                <div class="skeleton">
+                  <div class="grid px-4 py-3.5 border-b border-border items-center" style="grid-template-columns: 2fr 80px 100px 120px 100px">
+                    <div class="flex items-center gap-3">
+                      <div class="skeleton-bar" style="width: 16px; height: 16px;"></div>
+                      <div class="skeleton-bar" style="width: 32px; height: 32px; border-radius: 50%;"></div>
+                      <div class="skeleton-bar" style="width: 140px; height: 14px;"></div>
                     </div>
-                  </label>
-
-                  <!-- Expanded Content: Extracted Facts -->
-                  <div class="expand-content bg-secondary border-b border-border">
-                    <div class="px-6 py-4">
-                      <p class="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Extracted facts</p>
-                      <div class="flex flex-col gap-4">
-                        <!-- Environment -->
-                        <div>
-                          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Environment</span>
-                          <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">OS</span>
-                              <span class="text-xs text-foreground font-medium flex-1">macOS 14.5</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-success"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">Browser</span>
-                              <span class="text-xs text-foreground font-medium flex-1">Chrome 120</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-success"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <!-- Technical Stack -->
-                        <div>
-                          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Technical Stack</span>
-                          <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">API version</span>
-                              <span class="text-xs text-foreground font-medium flex-1">v2.3.1</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-warning"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="alert-circle"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4m0 4h.01"></path></g></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">Runtime</span>
-                              <span class="text-xs text-foreground font-medium flex-1">Node.js 20</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-success"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <!-- Known Issues -->
-                        <div>
-                          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Known Issues</span>
-                          <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border" style="border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">Auth Token</span>
-                              <span class="text-xs text-foreground font-medium flex-1">Expires at 60s</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-warning"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="alert-circle"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4m0 4h.01"></path></g></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border" style="border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">Webhook</span>
-                              <span class="text-xs text-foreground font-medium flex-1">30s retry window</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-warning"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="alert-circle"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4m0 4h.01"></path></g></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <!-- Resolutions -->
-                        <div>
-                          <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Resolutions</span>
-                          <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border" style="border-color: color-mix(in srgb, var(--color-success) 30%, transparent);">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">Known fix</span>
-                              <span class="text-xs text-foreground font-medium flex-1">Switch to eu-west-1</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-success"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                            <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border" style="border-color: color-mix(in srgb, var(--color-success) 30%, transparent);">
-                              <span class="text-xs text-muted-foreground w-28 flex-shrink-0">Encoding Fix</span>
-                              <span class="text-xs text-foreground font-medium flex-1">v2.1.5 patch</span>
-                              <div class="flex items-center gap-1.5 flex-shrink-0">
-                                <span class="text-success"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span></span>
-                                <button class="text-xs text-primary">Edit</button>
-                                <button class="text-xs text-muted-foreground">Delete</button>
-                                <button class="text-xs text-success">Verify</button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    <div class="skeleton-bar" style="width: 28px; height: 18px;"></div>
+                    <div class="skeleton-bar" style="width: 60px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 70px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 60px; height: 14px;"></div>
+                  </div>
+                  <div class="grid px-4 py-3.5 border-b border-border items-center" style="grid-template-columns: 2fr 80px 100px 120px 100px">
+                    <div class="flex items-center gap-3">
+                      <div class="skeleton-bar" style="width: 16px; height: 16px;"></div>
+                      <div class="skeleton-bar" style="width: 32px; height: 32px; border-radius: 50%;"></div>
+                      <div class="skeleton-bar" style="width: 140px; height: 14px;"></div>
                     </div>
+                    <div class="skeleton-bar" style="width: 28px; height: 18px;"></div>
+                    <div class="skeleton-bar" style="width: 60px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 70px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 60px; height: 14px;"></div>
+                  </div>
+                  <div class="grid px-4 py-3.5 items-center" style="grid-template-columns: 2fr 80px 100px 120px 100px">
+                    <div class="flex items-center gap-3">
+                      <div class="skeleton-bar" style="width: 16px; height: 16px;"></div>
+                      <div class="skeleton-bar" style="width: 32px; height: 32px; border-radius: 50%;"></div>
+                      <div class="skeleton-bar" style="width: 140px; height: 14px;"></div>
+                    </div>
+                    <div class="skeleton-bar" style="width: 28px; height: 18px;"></div>
+                    <div class="skeleton-bar" style="width: 60px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 70px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 60px; height: 14px;"></div>
                   </div>
                 </div>
+
+                <!-- Dynamic rows (hidden during loading) -->
+                <div id="memory-table-body" class="skeleton-target hidden"></div>
               </div>
             </div>
 
@@ -556,5 +463,6 @@
       </div>
     </body>
   </html>
-  <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+      <script src="memory_inspector.js"></script>
+      <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
 </div>

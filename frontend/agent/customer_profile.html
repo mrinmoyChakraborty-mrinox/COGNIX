@@ -345,6 +345,7 @@
           .hover\:-translate-y-0\.5:hover { translate: 0 calc(var(--spacing) * -0.5); }
           .hover\:border-primary\/20:hover { border-color: color-mix(in srgb, var(--color-primary) 20%, transparent); }
           .group:hover .group-hover\:opacity-100 { opacity: 100%; }
+          .hidden { display: none; }
         }
         @property --tw-border-style { syntax: "*"; inherits: false; initial-value: solid; }
         @property --tw-leading { syntax: "*"; inherits: false; }
@@ -488,6 +489,11 @@
         .confidence-dot.active {
           background-color: var(--color-primary);
         }
+
+        /* Skeleton loading */
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
+        .skeleton { display: block; }
+        .skeleton-bar { background: linear-gradient(90deg, var(--color-muted) 25%, var(--color-border) 50%, var(--color-muted) 75%); background-size: 200px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
         .timeline-dot {
           width: 10px;
           height: 10px;
@@ -667,18 +673,58 @@
 
           <!-- Dashboard Content -->
           <div class="flex-1 p-6 flex flex-col gap-6" style="max-width: 1360px">
+            <!-- Skeleton overlay (shown during loading) -->
+            <div class="skeleton">
+              <div class="card-base flex items-center gap-5" style="padding: 20px 24px">
+                <div class="skeleton-bar" style="width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;"></div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-1">
+                    <div class="skeleton-bar" style="width: 200px; height: 24px;"></div>
+                    <div class="skeleton-bar" style="width: 40px; height: 20px; border-radius: 6px;"></div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="skeleton-bar" style="width: 140px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 8px; height: 8px; border-radius: 50%;"></div>
+                    <div class="skeleton-bar" style="width: 120px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 8px; height: 8px; border-radius: 50%;"></div>
+                    <div class="skeleton-bar" style="width: 100px; height: 14px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bar" style="width: 64px; height: 64px; border-radius: 50%;"></div>
+              </div>
+              <div class="flex gap-6">
+                <div class="flex-1 flex flex-col gap-5" style="max-width: 58%">
+              <div class="grid grid-cols-3 gap-4">
+                <div class="skeleton-bar" style="height: 116px; border-radius: var(--radius-lg);"></div>
+                <div class="skeleton-bar" style="height: 116px; border-radius: var(--radius-lg);"></div>
+                <div class="skeleton-bar" style="height: 116px; border-radius: var(--radius-lg);"></div>
+              </div>
+              <div class="skeleton-bar" style="height: 140px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 340px; border-radius: var(--radius-lg);"></div>
+            </div>
+            <div class="flex flex-col gap-5" style="width: 42%">
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic content (hidden during loading) -->
+            <div class="skeleton-target hidden">
             <!-- Customer Header -->
             <div class="card-base flex items-center gap-5" style="padding: 20px 24px">
               <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1" class="w-14 h-14 rounded-full flex-shrink-0" data-component="@globalComponents/UserAvatar.jsx" />
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-3 mb-1">
-                  <h1 class="font-headings font-bold text-2xl text-foreground">Mrinmoy Chakraborty</h1>
-                  <span class="tier-badge">Pro</span>
+                  <h1 id="customer-name" class="font-headings font-bold text-2xl text-foreground">Mrinmoy Chakraborty</h1>
+                  <span id="customer-plan" class="tier-badge">Pro</span>
                 </div>
                 <div class="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                  <span>mrinmoy@acme.io</span>
+                  <span id="customer-email">mrinmoy@acme.io</span>
                   <span class="w-1 h-1 rounded-full bg-border"></span>
-                  <span>Customer for 2 years</span>
+                  <span id="customer-tenure">Customer for 2 years</span>
                   <span class="w-1 h-1 rounded-full bg-border"></span>
                   <span class="flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
@@ -692,7 +738,7 @@
                   <circle cx="32" cy="32" r="27" fill="none" stroke="#e2e5ea" stroke-width="5"></circle>
                   <circle cx="32" cy="32" r="27" fill="none" stroke="#f59e0b" stroke-width="5" stroke-dasharray="105.18052204218627 64.46548125166255" stroke-linecap="round"></circle>
                 </svg>
-                <span class="ring-value">62</span>
+                <span id="frustration-ring-value" class="ring-value">62</span>
               </div>
             </div>
 
@@ -708,7 +754,7 @@
                       <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;" data-icon="ticket"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Zm11-4v2m0 10v2m0-8v2"></path></svg></span>
                     </div>
                     <div>
-                      <div class="metric-value text-foreground">14</div>
+                      <div id="kpi-tickets" class="metric-value text-foreground">14</div>
                       <span class="card-label">Total Tickets</span>
                     </div>
                   </div>
@@ -719,7 +765,7 @@
                       <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;" data-icon="check-circle"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M21.801 10A10 10 0 1 1 17 3.335"></path><path d="m9 11l3 3L22 4"></path></g></svg></span>
                     </div>
                     <div>
-                      <div class="metric-value text-success">78%</div>
+                      <div id="kpi-resolved-rate" class="metric-value text-success">78%</div>
                       <span class="card-label">Resolved Rate</span>
                     </div>
                   </div>
@@ -730,7 +776,7 @@
                       <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;" data-icon="flame"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0a5 5 0 0 1 1-3a1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"></path></svg></span>
                     </div>
                     <div>
-                      <div class="metric-value text-warning">62</div>
+                      <div id="kpi-frustration" class="metric-value text-warning">62</div>
                       <span class="card-label">Frustration Score</span>
                     </div>
                   </div>
@@ -746,24 +792,24 @@
                         <div class="tooltip-text">Health score combines support history, resolution success, recent activity, and frustration trends.</div>
                       </div>
                     </div>
-                    <span class="status-badge bg-success/10 text-success">
+                    <span id="health-badge" class="status-badge bg-success/10 text-success">
                       <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
                       Healthy
                     </span>
                   </div>
                   <div class="flex items-baseline gap-1 mb-3">
-                    <span class="metric-value text-foreground">78</span>
+                    <span id="health-score-value" class="metric-value text-foreground">78</span>
                     <span class="text-lg text-muted-foreground font-medium">/ 100</span>
                   </div>
                   <div class="health-bar">
-                    <div class="health-bar-fill"></div>
+                    <div id="health-score-fill" class="health-bar-fill"></div>
                   </div>
                 </div>
 
                 <!-- Issue Timeline -->
                 <div class="card-base transition-shadow hover:shadow-md">
                   <h2 class="section-heading mb-4"><span data-file="/screens/CustomerProfile.jsx" data-idx="3">Issue Timeline</span></h2>
-                  <div class="flex flex-col gap-0" data-component="@components/IssueTimeline.jsx">
+                  <div id="timeline-container" class="flex flex-col gap-0" data-component="@components/IssueTimeline.jsx">
                     <!-- Timeline item 1 -->
                     <div class="flex gap-4">
                       <div class="flex flex-col items-center">
@@ -858,7 +904,7 @@
                 <!-- Memory Graph - Simplified to Technical Context -->
                 <div class="card-base transition-shadow hover:shadow-md" data-component="@components/MemoryGraph.jsx">
                   <h2 class="section-heading mb-4">Memory Graph</h2>
-                  <div class="memory-chip">
+                  <div id="memory-graph-container" class="memory-chip">
                     <div class="flex items-center justify-between mb-3">
                       <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technical Context</span>
                       <div class="confidence-dots">
@@ -887,7 +933,7 @@
                 <!-- Behavior - Single Insight Card -->
                 <div class="card-base transition-shadow hover:shadow-md" data-component="@components/Behavior.jsx">
                   <h2 class="section-heading mb-3">Behavior</h2>
-                  <div class="insight-card" style="background: linear-gradient(135deg, #f0f2f5 0%, #f5f6f8 100%);">
+                  <div id="behavior-container" class="insight-card" style="background: linear-gradient(135deg, #f0f2f5 0%, #f5f6f8 100%);">
                     <span class="flex-shrink-0" style="font-size: 20px; line-height: 1;">⚡</span>
                     <div class="flex-1 min-w-0">
                       <span class="body-text font-medium text-foreground block">High-Frequency API Calls</span>
@@ -908,7 +954,7 @@
                 <!-- Preferences - Single Insight Card -->
                 <div class="card-base transition-shadow hover:shadow-md" data-component="@components/Preferences.jsx">
                   <h2 class="section-heading mb-3">Preferences</h2>
-                  <div class="insight-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                  <div id="preferences-container" class="insight-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
                     <span class="flex-shrink-0" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: var(--color-success); color: white; font-size: 12px; font-weight: 700;">✓</span>
                     <span class="body-text font-medium text-foreground">No Escalation Calls</span>
                   </div>
@@ -917,7 +963,7 @@
                 <!-- Known Frustrations - Warning Styled -->
                 <div class="card-base transition-shadow hover:shadow-md" style="border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);" data-component="@components/KnownFrustrations.jsx">
                   <h2 class="section-heading mb-3">Known Frustrations</h2>
-                  <div class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
+                  <div id="frustrations-container" class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
                     <span class="flex-shrink-0" style="font-size: 18px; line-height: 1;">⚠</span>
                     <div class="flex-1 min-w-0">
                       <span class="body-text font-medium text-foreground block">Repeated Timeout Issues</span>
@@ -928,9 +974,11 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
       </div>
     </body>
   </html>
-  <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+      <script src="customer_profile.js"></script>
+      <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
 </div>
