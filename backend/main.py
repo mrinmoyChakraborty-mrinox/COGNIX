@@ -1,5 +1,27 @@
+# ============================================================
+# COGNIX — Backend
+# ============================================================
+# Stack: FastAPI · Hindsight Memory · Groq LLM · Supabase
+# ------------------------------------------------------------
+# Structure:
+#   1. Imports & Config
+#   2. Logging Setup
+#   3. Pydantic Models
+#   4. Mock Database Layer
+#   5. Service Classes
+#      - CustomerService
+#      - TicketService
+#      - MemoryService
+#      - LLMService
+#   6. FastAPI App & Middleware
+#   7. REST Endpoints
+#   8. WebSocket Endpoint
+#   9. Demo Endpoint
+# ============================================================
+
 import os
 import logging
+import logging.config
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -17,9 +39,19 @@ from models import (
     Ticket,
 )
 
+# ── env ─────────────────────────────────────────────────────
+
 load_dotenv()
 
+# ── logging ──────────────────────────────────────────────────
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
 logger = logging.getLogger("cognix")
+
+# ── repository layer (mock vs real) ─────────────────────────
 
 USE_MOCK = os.getenv("USE_MOCK_DATA", "").lower() in ("true", "1", "yes")
 
@@ -33,7 +65,6 @@ if USE_MOCK:
         resolve_ticket,
         escalate_ticket,
     )
-
     logger.info("Using mock repositories")
 else:
     from repositories.customer_repository import (
@@ -48,38 +79,79 @@ else:
         escalate_ticket,
     )
 
-from memory import retrieve_memories, save_memory, get_all_memories, reflect
+# ── memory & llm layers ──────────────────────────────────────
+
+from memory import (
+    retrieve_memories,
+    save_memory,
+    get_all_memories,
+    reflect,
+    ensure_bank,
+    seed_customer_memory,
+    build_retrieval_viz,
+)
 from llm import generate_response
+
+
+# ── startup / shutdown ───────────────────────────────────────
+
+REQUIRED_ENV_VARS = [
+    "GROQ_API_KEY",
+    "HINDSIGHT_API_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_KEY",
+]
+
+
+def _validate_env() -> list[str]:
+    return [k for k in REQUIRED_ENV_VARS if not os.getenv(k)]
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("COGNIX starting up")
+    print(
+        "\n"
+        "╔══════════════════════════════════════╗\n"
+        "║        COGNIX  v1.0.0         ║\n"
+        "║  FastAPI · Hindsight · Groq · Supa   ║\n"
+        "╚══════════════════════════════════════╝\n"
+    )
+    missing = _validate_env()
+    if missing:
+        logger.warning(
+            "Missing env vars (some features will fall back to mock): %s",
+            ", ".join(missing),
+        )
+    logger.info("COGNIX started — USE_MOCK=%s", USE_MOCK)
     yield
-    logger.info("COGNIX shutting down")
+    logger.info("COGNIX shutting down cleanly")
 
+
+# ── app ──────────────────────────────────────────────────────
 
 app = FastAPI(
     title="COGNIX",
     version="1.0.0",
-    description="Customer support agent with persistent memory",
+    description="Customer support agent with persistent Hindsight memory",
     lifespan=lifespan,
 )
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# ── exception handlers ───────────────────────────────────────
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc: HTTPException):
-    logger.warning(
-        "HTTPException | status=%d | path=%s", exc.status_code, request.url.path
-    )
+    logger.warning("HTTPException | status=%d | path=%s", exc.status_code, request.url.path)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -103,6 +175,8 @@ async def global_exception_handler(request, exc: Exception):
     )
 
 
+# ── REST endpoints ───────────────────────────────────────────
+
 @app.get("/health")
 async def health_check():
     return {
@@ -110,9 +184,9 @@ async def health_check():
         "version": "1.0.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "services": {
-            "hindsight": "not_connected",
-            "groq": "not_connected",
-            "supabase": "not_connected",
+            "hindsight": "connected" if os.getenv("HINDSIGHT_API_KEY") else "not_configured",
+            "groq":      "connected" if os.getenv("GROQ_API_KEY")      else "not_configured",
+            "supabase":  "connected" if os.getenv("SUPABASE_URL")       else "not_configured",
         },
     }
 
@@ -124,16 +198,32 @@ async def list_all_customers():
 
 @app.post("/customers", response_model=Customer, status_code=status.HTTP_201_CREATED)
 async def create_new_customer(req: CreateCustomerRequest):
-    return await create_customer(req)
+    customer: Customer = await create_customer(req)
+
+    # Provision Hindsight memory bank immediately on customer creation.
+    # seed_customer_memory calls ensure_bank internally, so no double call.
+    try:
+        await seed_customer_memory(
+            customer_id=customer.id,
+            customer_name=customer.name,
+            company=customer.company,
+            plan=customer.plan,
+            email=customer.email,
+        )
+    except Exception:
+        # Non-fatal — memory bank will be created lazily on first session.
+        logger.warning(
+            "Could not seed memory bank at creation time | customer_id=%s", customer.id
+        )
+
+    return customer
 
 
 @app.get("/customers/{customer_id}", response_model=Customer)
 async def get_customer_by_id(customer_id: str):
     customer = await get_customer(customer_id)
     if customer is None:
-        raise HTTPException(
-            status_code=404, detail=f"Customer '{customer_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found")
     return customer
 
 
@@ -141,9 +231,7 @@ async def get_customer_by_id(customer_id: str):
 async def get_customer_memories(customer_id: str):
     customer = await get_customer(customer_id)
     if customer is None:
-        raise HTTPException(
-            status_code=404, detail=f"Customer '{customer_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found")
     return await get_all_memories(customer_id)
 
 
@@ -151,9 +239,7 @@ async def get_customer_memories(customer_id: str):
 async def get_customer_tickets(customer_id: str):
     customer = await get_customer(customer_id)
     if customer is None:
-        raise HTTPException(
-            status_code=404, detail=f"Customer '{customer_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Customer '{customer_id}' not found")
     return await get_tickets(customer_id)
 
 
@@ -161,23 +247,26 @@ async def get_customer_tickets(customer_id: str):
 async def support_chat(req: SupportRequest):
     customer = await get_customer(req.customer_id)
     if customer is None:
-        raise HTTPException(
-            status_code=404, detail=f"Customer '{req.customer_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Customer '{req.customer_id}' not found")
 
-    memories = await retrieve_memories(req.customer_id, req.message)
-    reflection = await reflect(req.customer_id, req.message)
+    # Ensure bank exists (idempotent — safe to call every time)
+    await ensure_bank(req.customer_id, customer.name, customer.plan)
+
+    memories, _ = await retrieve_memories(req.customer_id, req.message)
+    reflection   = await reflect(req.customer_id, req.message)
+
     response_text, suggested_solution = await generate_response(
         customer, memories, req.message, reflection
     )
+
     await save_memory(
         req.customer_id,
-        f'Customer asked: "{req.message[:100]}". Agent responded: "{response_text[:100]}".',
+        f'Customer: "{req.message[:120]}". Agent: "{response_text[:120]}".',
         "support session",
     )
 
-    frustration_score = 0
-    escalation_flag = frustration_score > 70
+    frustration_score = customer.frustration_score
+    escalation_flag   = frustration_score > 70
 
     return SupportResponse(
         response=response_text,
@@ -190,58 +279,117 @@ async def support_chat(req: SupportRequest):
     )
 
 
+# ── WebSocket ────────────────────────────────────────────────
+
 @app.websocket("/ws/session/{customer_id}")
 async def websocket_session(websocket: WebSocket, customer_id: str):
     await websocket.accept()
     logger.info("WebSocket connected | customer_id=%s", customer_id)
 
+    # Validate customer
     customer = await get_customer(customer_id)
     if customer is None:
         await websocket.close(code=4004, reason=f"Customer '{customer_id}' not found")
         return
 
-    opening_reflection = await reflect(
-        customer_id, "What is this customer most likely contacting support about today?"
-    )
-    await websocket.send_json({"event": "opening", "data": opening_reflection})
+    # Ensure memory bank exists before any recall/reflect calls
+    try:
+        await ensure_bank(customer_id, customer.name, customer.plan)
+    except Exception:
+        logger.warning(
+            "Bank provisioning failed on WS connect — proceeding anyway | customer_id=%s",
+            customer_id,
+        )
 
+    # ── Opening message ──────────────────────────────────────
+    # Humble greeting: signal that memory is loaded without being creepy.
+    # The wow moment comes AFTER the customer types their first message.
+    opening_reflection = await reflect(
+        customer_id,
+        "Briefly summarise this customer's most recent unresolved issue or concern "
+        "in one sentence. If nothing is unresolved, say so.",
+    )
+
+    if opening_reflection:
+        opening_text = (
+            f"Welcome back, {customer.name}.\n\n"
+            "I have access to your previous support history and can help "
+            "without you needing to repeat details.\n\n"
+            f"Quick note from your history: {opening_reflection}\n\n"
+            "How can I help you today?"
+        )
+    else:
+        opening_text = (
+            f"Welcome back, {customer.name}.\n\n"
+            "I have access to your previous support history and can help "
+            "without you needing to repeat details.\n\n"
+            "How can I help you today?"
+        )
+
+    await websocket.send_json({"event": "opening", "data": opening_text})
+
+    # ── Message loop ─────────────────────────────────────────
     try:
         while True:
-            data = await websocket.receive_text()
-            await websocket.send_json({"event": "status", "data": "thinking..."})
+            raw = await websocket.receive_text()
+            message = raw.strip()
+            if not message:
+                continue
 
-            memories = await retrieve_memories(customer_id, data)
-            reflection = await reflect(customer_id, data)
-            response_text, _ = await generate_response(
-                customer, memories, data, reflection
+            # Immediate feedback so the customer sees a typing indicator
+            await websocket.send_json({
+                "event": "status",
+                "data": "thinking...",
+                "query": message,
+            })
+
+            # 1. Retrieve memories — returns (memories, elapsed_ms)
+            memories, elapsed_ms = await retrieve_memories(customer_id, message)
+
+            # 2. Build the retrieval visualisation payload and push it
+            #    to the agent panel BEFORE the LLM has even finished.
+            #    This makes the panel feel live and fast.
+            viz = build_retrieval_viz(message, memories, elapsed_ms)
+            await websocket.send_json({
+                "event": "memory.update",
+                **viz,                       # query, hits, total, retrieval_time_ms
+            })
+
+            # 3. Reflect — synthesised summary over all memories
+            reflection = await reflect(customer_id, message)
+
+            # 4. Generate LLM response
+            response_text, suggested_solution = await generate_response(
+                customer, memories, message, reflection
             )
+
+            # 5. Save this interaction to memory (async-friendly — fire and don't wait)
             await save_memory(
                 customer_id,
-                f'Customer: "{data[:100]}". Agent: "{response_text[:100]}".',
+                f'Customer said: "{message[:120]}". '
+                f'Agent replied: "{response_text[:120]}".',
                 "support session",
             )
 
-            frustration_score = 0
-            await websocket.send_json(
-                {"event": "memory.update", "data": [m.content for m in memories]}
-            )
-            await websocket.send_json(
-                {
-                    "event": "chat.reply",
-                    "data": response_text,
-                    "escalation_flag": frustration_score > 70,
-                    "frustration_score": frustration_score,
-                }
-            )
+            # 6. Compute escalation flag from customer's frustration score
+            frustration_score = customer.frustration_score
+            escalation_flag   = frustration_score > 70
+
+            # 7. Send reply to frontend
+            await websocket.send_json({
+                "event": "chat.reply",
+                "data": response_text,
+                "suggested_solution": suggested_solution,
+                "escalation_flag": escalation_flag,
+                "frustration_score": frustration_score,
+            })
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected | customer_id=%s", customer_id)
-    except Exception as e:
+    except Exception as exc:
         logger.error(
             "WebSocket error | customer_id=%s | error=%s",
-            customer_id,
-            str(e),
-            exc_info=True,
+            customer_id, str(exc), exc_info=True,
         )
         try:
             await websocket.close(code=1011, reason="Internal server error")
@@ -249,8 +397,86 @@ async def websocket_session(websocket: WebSocket, customer_id: str):
             pass
 
 
+# ── Demo endpoint ────────────────────────────────────────────
+
+@app.get("/demo/memory-flow")
+async def demo_memory_flow():
+    """
+    Returns a hardcoded but fully realistic end-to-end pipeline example.
+    Exists purely for hackathon demo day — judges can hit this endpoint
+    to see the full COGNIX flow without needing a live customer.
+    """
+    return {
+        "demo_note": (
+            "This endpoint illustrates the full COGNIX pipeline. "
+            "All data below is realistic but pre-computed for demo purposes."
+        ),
+        "customer": {
+            "id": "cust_demo_001",
+            "name": "Mrinmoy Chakraborty",
+            "email": "mrinmoy@example.com",
+            "company": "DataPipe Labs",
+            "plan": "pro",
+            "ticket_count": 3,
+            "frustration_score": 68,
+        },
+        "step_1_customer_message": "same issue as before",
+        "step_2_retrieved_memories": [
+            {
+                "content": "Apr 02 — Customer reported timeout on /ingest endpoint. "
+                           "Resolved by increasing payload size limit to 10MB.",
+                "memory_type": "experience",
+                "context": "support session",
+                "label": "Experience",
+            },
+            {
+                "content": "Customer environment: Python SDK v2.3.1, Ubuntu 22.04, Pro plan.",
+                "memory_type": "world_fact",
+                "context": "onboarding",
+                "label": "Fact",
+            },
+            {
+                "content": "Customer has escalated twice when issues were unresolved for more than 2 days.",
+                "memory_type": "observation",
+                "context": "escalation pattern",
+                "label": "Observation",
+            },
+        ],
+        "step_2_retrieval_time_ms": 312,
+        "step_3_reflect_summary": (
+            "Mrinmoy's most recent unresolved concern is a recurring timeout "
+            "on the /ingest endpoint. The fix that worked in April was increasing "
+            "the payload size limit. He has a history of escalating if not resolved quickly."
+        ),
+        "step_4_generated_response": (
+            "I believe you're referring to the /ingest timeout from April.\n\n"
+            "The fix that worked last time was increasing the payload size limit to 10MB "
+            "in your SDK config:\n\n"
+            "    client = MemSupportClient(max_payload_size='10mb')\n\n"
+            "Would you like to try that first, or has something changed in your setup since then?"
+        ),
+        "step_5_saved_memory": (
+            "Customer reported /ingest timeout recurring (Jun 2026). "
+            "Agent suggested payload size fix again. Escalation risk: moderate."
+        ),
+        "step_6_frustration_score": 68,
+        "step_7_escalation_flag": False,
+        "retrieval_visualisation": {
+            "query": "same issue as before",
+            "hits": [
+                {"content": "Apr 02 — /ingest timeout → payload fix worked", "memory_type": "experience",  "label": "Experience"},
+                {"content": "Python SDK v2.3.1, Ubuntu 22.04",               "memory_type": "world_fact",  "label": "Fact"},
+                {"content": "Escalates if unresolved > 2 days",              "memory_type": "observation", "label": "Observation"},
+            ],
+            "total": 3,
+            "retrieval_time_ms": 312,
+        },
+    }
+
+
+# ── entrypoint ───────────────────────────────────────────────
+
 if __name__ == "__main__":
     import uvicorn
-
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
