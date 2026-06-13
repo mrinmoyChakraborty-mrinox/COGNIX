@@ -265,6 +265,17 @@ html, body {
   margin-top: 2px;
 }
 
+.ticket-avatar-initials {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .ticket-body {
   flex: 1;
   min-width: 0;
@@ -283,9 +294,15 @@ html, body {
   font-size: 15px;
 }
 
-.ticket-wait {
+.ticket-wait, .ticket-company {
   font-size: 12px;
   color: var(--color-muted-foreground);
+}
+
+.ticket-company {
+  background-color: var(--color-input);
+  padding: 1px 7px;
+  border-radius: 4px;
 }
 
 .ticket-desc {
@@ -480,10 +497,15 @@ html, body {
   }
 }
 
-/* Skeleton Loading */
+/* ── Skeleton Loading ───────────────────────────────────────── */
 
 .skeleton {
-  animation: skeleton-loading 1.2s infinite alternate;
+  animation: skeleton-pulse 1.2s infinite alternate;
+}
+
+@keyframes skeleton-pulse {
+  from { background-color: #e5e7eb; }
+  to   { background-color: #f3f4f6; }
 }
 
 .skeleton-text {
@@ -499,13 +521,128 @@ html, body {
   border-radius: 50%;
 }
 
-@keyframes skeleton-loading {
-  from {
-    background-color: #e5e7eb;
-  }
+.skeleton-avatar-lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
-  to {
-    background-color: #f3f4f6;
-  }
+.skeleton-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+.w-10 { width: 10%; }
+.w-20 { width: 20%; }
+.w-22 { width: 22%; }
+.w-25 { width: 25%; }
+.w-28 { width: 28%; }
+.w-30 { width: 30%; }
+.w-35 { width: 35%; }
+.w-40 { width: 40%; }
+.w-45 { width: 45%; }
+.w-50 { width: 50%; }
+.w-55 { width: 55%; }
+.w-60 { width: 60%; }
+.w-65 { width: 65%; }
+.w-70 { width: 70%; }
+.w-75 { width: 75%; }
+
+.skeleton-ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-btn {
+  width: 90px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.skeleton-bar {
+  height: 10px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+/* ── Error banner ──────────────────────────────────────────── */
+
+.error-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.error-banner svg {
+  flex-shrink: 0;
+  color: #ef4444;
+}
+
+.error-retry-btn {
+  margin-left: auto;
+  background-color: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.error-retry-btn:hover {
+  opacity: 0.85;
+}
+
+/* ── Empty state ───────────────────────────────────────────── */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--color-muted-foreground);
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-state svg {
+  opacity: 0.4;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ── Utility ───────────────────────────────────────────────── */
+
+.hidden {
+  display: none !important;
 }
 

@@ -97,20 +97,30 @@ confirmPasswordField.classList.remove("hidden");
 
 
 async function signUp(
-email,
-password
+ email,
+ password
 ){
 
-const {
-error
-}
-=
-await supabaseClient.auth.signUp({
+ const fullName =
+ document
+ .getElementById("fullName")
+ .value;
 
-email,
-password
+ const {
+ error
+ }
+ =
+ await supabaseClient.auth.signUp({
 
-});
+ email,
+ password,
+ options:{
+  data:{
+   full_name:fullName
+  }
+ }
+
+ });
 
 if(error){
 
@@ -148,7 +158,7 @@ async function signIn(email,password){
  alert("Login Success");
 
  window.location.href =
- "fronted/dashboard.html";
+ "dashboard.html";
 }
 
 // =========================

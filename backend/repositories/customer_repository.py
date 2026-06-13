@@ -6,14 +6,13 @@
 # Expected Supabase table DDL:
 #
 #   create table customers (
-#     id               text primary key,
-#     name             text not null,
-#     email            text not null unique,
-#     company          text not null,
-#     plan             text not null default 'free',
-#     created_at       timestamptz not null default now(),
-#     ticket_count     int not null default 0,
-#     frustration_score int not null default 0
+#     id                text primary key,
+#     name              text not null,
+#     email             text not null unique,
+#     created_at        timestamptz not null default now(),
+#     ticket_count      int not null default 0,
+#     frustration_score int not null default 0,
+#     last_seen         timestamptz
 #   );
 #
 # Run this SQL in the Supabase SQL editor before use.
@@ -61,17 +60,17 @@ async def _get_client() -> AsyncClient:
 
 # ── helpers ──────────────────────────────────────────────────
 
+
 def _row_to_customer(row: dict) -> Customer:
     """Map a raw Supabase row dict → Customer model."""
     return Customer(
         id=row["id"],
         name=row["name"],
         email=row["email"],
-        company=row["company"],
-        plan=row["plan"],
         created_at=_parse_ts(row.get("created_at")),
         ticket_count=row.get("ticket_count", 0),
         frustration_score=row.get("frustration_score", 0),
+        last_seen=_parse_ts(row.get("last_seen")) if row.get("last_seen") else None,
     )
 
 
@@ -87,6 +86,7 @@ def _parse_ts(value) -> datetime:
 
 # ── public interface ─────────────────────────────────────────
 
+
 async def get_customer(customer_id: str) -> Optional[Customer]:
     """
     Fetch a single customer by primary key.
@@ -98,7 +98,7 @@ async def get_customer(customer_id: str) -> Optional[Customer]:
             await client.table("customers")
             .select("*")
             .eq("id", customer_id)
-            .maybe_single()   # returns None instead of raising on 0 rows
+            .maybe_single()  # returns None instead of raising on 0 rows
             .execute()
         )
         if resp.data is None:
@@ -112,7 +112,9 @@ async def get_customer(customer_id: str) -> Optional[Customer]:
     except Exception as exc:
         logger.error(
             "get_customer failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -150,24 +152,18 @@ async def create_customer(req: CreateCustomerRequest) -> Customer:
     try:
         client = await _get_client()
         new_id = f"cust_{uuid4().hex[:12]}"
-        now    = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         payload = {
-            "id":                new_id,
-            "name":              req.name,
-            "email":             req.email,
-            "company":           req.company,
-            "plan":              req.plan,
-            "created_at":        now,
-            "ticket_count":      0,
+            "id": new_id,
+            "name": req.name,
+            "email": req.email,
+            "created_at": now,
+            "ticket_count": 0,
             "frustration_score": 0,
         }
 
-        resp = (
-            await client.table("customers")
-            .insert(payload)
-            .execute()
-        )
+        resp = await client.table("customers").insert(payload).execute()
 
         if not resp.data:
             raise RuntimeError("Supabase insert returned no data")
@@ -175,14 +171,17 @@ async def create_customer(req: CreateCustomerRequest) -> Customer:
         customer = _row_to_customer(resp.data[0])
         logger.info(
             "Customer created | customer_id=%s | email=%s",
-            customer.id, customer.email,
+            customer.id,
+            customer.email,
         )
         return customer
 
     except Exception as exc:
         logger.error(
             "create_customer failed | email=%s | error=%s",
-            req.email, exc, exc_info=True,
+            req.email,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -204,14 +203,17 @@ async def update_frustration_score(customer_id: str, score: int) -> bool:
         )
         logger.info(
             "frustration_score updated | customer_id=%s | score=%d",
-            customer_id, clamped,
+            customer_id,
+            clamped,
         )
         return True
 
     except Exception as exc:
         logger.error(
             "update_frustration_score failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return False
 
@@ -241,6 +243,8 @@ async def increment_ticket_count(customer_id: str) -> bool:
     except Exception as exc:
         logger.error(
             "increment_ticket_count failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return False

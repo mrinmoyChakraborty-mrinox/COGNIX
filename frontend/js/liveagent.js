@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
  } = await supabaseClient.auth.getSession();
 
  if (!session) {
-   window.location.href = "/index.html";
+   window.location.href = "/liveagent.html";
    return;
  }
 
