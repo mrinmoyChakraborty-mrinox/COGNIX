@@ -112,8 +112,8 @@ async def lifespan(app: FastAPI):
     print(
         "\n"
         "╔══════════════════════════════════════╗\n"
-        "║        COGNIX  v1.0.0         ║\n"
-        "║  FastAPI · Hindsight · Groq · Supa   ║\n"
+        "║        COGNIX  v1.0.0                ║\n"
+        "║FastAPI · Hindsight · Groq · Supabase ║\n"
         "╚══════════════════════════════════════╝\n"
     )
     missing = _validate_env()
