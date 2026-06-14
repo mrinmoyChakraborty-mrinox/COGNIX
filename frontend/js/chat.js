@@ -5,7 +5,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let currentCustomer = null;
 let tickets = [];
 let activeTicketId = null;
-let _typingEl = null;
 
 function $(id) { return document.getElementById(id); }
 
@@ -20,6 +19,15 @@ function formatDate(iso) {
   const d = new Date(iso);
   const month = d.toLocaleString("en-US", { month: "short" });
   return `${month} ${d.getDate()}`;
+}
+
+function now() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function scrollToBottom() {
+  const el = $("chatMessages");
+  el.scrollTop = el.scrollHeight;
 }
 
 async function getToken() {
@@ -69,7 +77,7 @@ async function init() {
 
     tickets = await loadTickets() || [];
 
-    renderSidebar(currentCustomer);
+    renderPortalHeader(currentCustomer);
     renderTickets(tickets);
 
     const openTicket = tickets.find(t => t.status === "open");
@@ -88,54 +96,99 @@ async function init() {
   }
 }
 
-function renderSidebar(customer) {
+function renderPortalHeader(customer) {
   const name = customer.name || customer.email?.split("@")[0] || "Customer";
   $("greetingName").textContent = name;
-  $("planBadge").textContent = customer.plan || "Free";
   $("avatarImg").src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5b5ef4&color=fff`;
 }
 
+function getCustomerName() {
+  return currentCustomer?.name || currentCustomer?.email?.split("@")[0] || "You";
+}
+
+function getUserAvatarHtml() {
+  const name = getCustomerName();
+  return `<img src="https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5b5ef4&color=fff" class="user-avatar-sm" alt="${escapeHtml(name)}" />`;
+}
+
 function renderTickets(list) {
-  const container = $("ticketList");
+  const container = $("ticketDropdownList");
+  const empty = $("ticketDropdownEmpty");
   container.innerHTML = "";
 
   if (!list || list.length === 0) {
-    container.innerHTML = '<div class="ticket-empty">No tickets yet. Create one to get started.</div>';
+    empty?.classList.remove("hidden");
     return;
   }
 
+  empty?.classList.add("hidden");
+
   for (const t of list) {
     const row = document.createElement("div");
-    row.className = "ticket-row";
+    row.className = "ticket-dropdown-row";
     row.dataset.ticketId = t.id;
     if (t.id === activeTicketId) row.classList.add("active");
 
     const statusClass = t.status === "resolved" ? "resolved" : "open";
     row.innerHTML = `
-      <span class="ticket-row-subject">${escapeHtml(t.subject)}</span>
-      <div class="ticket-row-meta">
-        <span class="status-pill ${statusClass}">${t.status}</span>
-        <span class="ticket-row-date">${formatDate(t.created_at)}</span>
-      </div>
+      <span class="ticket-dd-subject">${escapeHtml(t.subject)}</span>
+      <span class="ticket-dd-status ${statusClass}">${t.status}</span>
+      <span class="ticket-dd-date">${formatDate(t.created_at)}</span>
     `;
 
-    row.addEventListener("click", () => selectTicket(t));
+    row.addEventListener("click", () => {
+      selectTicket(t);
+      $("ticketDropdown")?.classList.add("hidden");
+    });
+
     container.appendChild(row);
   }
 }
 
 function selectTicket(ticket) {
   activeTicketId = ticket.id;
-  $("chatHeaderSubject").textContent = ticket.subject;
-  $("chatHeaderMeta").textContent = ticket.status === "resolved"
-    ? "This ticket has been resolved."
-    : "Open ticket — type a message below.";
-  $("chatMessages").innerHTML = "";
-  $("welcomeBanner").classList.remove("hidden");
 
-  document.querySelectorAll(".ticket-row").forEach(el => {
+  $("ticketBarSubject").textContent = ticket.subject;
+  const statusEl = $("ticketBarStatus");
+  statusEl.textContent = ticket.status;
+  statusEl.style.background = ticket.status === "resolved" ? "#dcfce7" : "#fef3c7";
+  statusEl.style.color = ticket.status === "resolved" ? "#166534" : "#92400e";
+
+  const container = $("chatMessages");
+  container.innerHTML = "";
+  const welcome = $("welcomeBanner");
+  welcome.classList.remove("hidden");
+  welcome.innerHTML = `<h2>${escapeHtml(ticket.subject)}</h2><p>${ticket.status === "resolved" ? "This ticket has been resolved." : "Open ticket — type a message below."}</p>`;
+  container.appendChild(welcome);
+
+  const typingRow = $("typingRow");
+  if (typingRow) container.appendChild(typingRow);
+
+  const dropdown = $("ticketDropdown");
+  if (dropdown) dropdown.classList.add("hidden");
+
+  document.querySelectorAll(".ticket-dropdown-row").forEach(el => {
     el.classList.toggle("active", el.dataset.ticketId === ticket.id);
   });
+
+  updateSessionSummary(ticket);
+}
+
+function updateSessionSummary(ticket) {
+  const summary = $("sessionSummary");
+  const text = $("summaryText");
+  const badge = $("sessionStatusBadge");
+  const num = $("ticketNum");
+
+  if (!ticket) {
+    summary?.classList.add("hidden");
+    return;
+  }
+
+  summary?.classList.remove("hidden");
+  if (text) text.textContent = ticket.subject;
+  if (badge) badge.textContent = ticket.status;
+  if (num) num.textContent = `#${ticket.id?.toString().slice(-4) || "---"}`;
 }
 
 function openModal() {
@@ -153,6 +206,7 @@ async function handleTicketSubmit() {
   const subject = $("ticketSubject").value.trim();
   if (!subject) {
     $("ticketSubjectError").classList.remove("hidden");
+    $("ticketSubjectError").textContent = "Please enter a subject";
     return;
   }
   $("ticketSubjectError").classList.add("hidden");
@@ -197,57 +251,75 @@ function showToast(message) {
 }
 
 function appendMessage(role, text) {
-  $("welcomeBanner")?.classList.add("hidden");
-  const div = document.createElement("div");
-  div.className = `msg ${role === "user" ? "msg-right" : "msg-left"}`;
-  div.innerHTML = `
-    <div class="msg-body">
-      <div class="bubble ${role === "user" ? "bubble-outgoing" : "bubble-incoming"}">
-        ${escapeHtml(text)}
+  const welcome = $("welcomeBanner");
+  if (welcome) welcome.classList.add("hidden");
+
+  const isAI = role !== "user";
+  const t = now();
+  const row = document.createElement("div");
+  row.className = `bubble-row ${isAI ? "row-ai" : "row-user"} msg-new`;
+
+  if (isAI) {
+    row.innerHTML = `
+      <div class="bot-avatar">
+        <svg viewBox="0 0 20 20" fill="none">
+          <path d="M10 2.5C10 2.5 5 5.5 5 10.5C5 13.26 7.24 15.5 10 15.5C12.76 15.5 15 13.26 15 10.5C15 5.5 10 2.5Z" fill="white" fill-opacity="0.9"/>
+          <circle cx="10" cy="10.5" r="2.5" fill="white" fill-opacity="0.5"/>
+        </svg>
       </div>
-      <span class="msg-time">${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
-    </div>
-  `;
-  $("chatMessages").appendChild(div);
-  $("chatMessages").scrollTop = $("chatMessages").scrollHeight;
+      <div class="bubble-group">
+        <span class="bubble-meta">COGNIX AI · ${t}</span>
+        <div class="bubble bubble-ai">${escapeHtml(text)}</div>
+      </div>`;
+  } else {
+    const name = getCustomerName();
+    row.innerHTML = `
+      <div class="bubble-group group-right">
+        <span class="bubble-meta meta-right">${escapeHtml(name)} · ${t}</span>
+        <div class="bubble bubble-user">${escapeHtml(text)}</div>
+      </div>
+      ${getUserAvatarHtml()}`;
+  }
+
+  const typingRow = $("typingRow");
+  const container = $("chatMessages");
+  if (typingRow) {
+    container.insertBefore(row, typingRow);
+  } else {
+    container.appendChild(row);
+  }
+  scrollToBottom();
 }
 
 function showTypingIndicator(show) {
-  if (show && !_typingEl) {
-    _typingEl = document.createElement("div");
-    _typingEl.className = "msg msg-left typing-indicator";
-    _typingEl.innerHTML = `
-      <div class="msg-body">
-        <div class="bubble bubble-incoming">
-          <span></span><span></span><span></span>
-        </div>
-      </div>`;
-    $("chatMessages").appendChild(_typingEl);
-    $("chatMessages").scrollTop = $("chatMessages").scrollHeight;
-  } else if (!show && _typingEl) {
-    _typingEl.remove();
-    _typingEl = null;
-  }
+  const typingRow = $("typingRow");
+  if (!typingRow) return;
+  typingRow.style.display = show ? "flex" : "none";
+  if (show) scrollToBottom();
 }
 
 function showError(msg) {
   const banner = $("errorBanner");
-  banner.textContent = msg;
-  banner.classList.remove("hidden");
+  if (banner) {
+    banner.textContent = msg;
+    banner.classList.remove("hidden");
+  }
 }
 
 function hideError() {
-  $("errorBanner").classList.add("hidden");
+  const banner = $("errorBanner");
+  if (banner) banner.classList.add("hidden");
 }
 
 async function sendMessage() {
-  const text = $("replyInput").textContent.trim();
+  const input = $("msgInput");
+  const text = input?.value.trim();
   if (!text) return;
 
   hideError();
   appendMessage("user", text);
-  $("replyInput").textContent = "";
-  $("replyInput").focus();
+  input.value = "";
+  input.focus();
   showTypingIndicator(true);
 
   try {
@@ -274,13 +346,31 @@ async function sendMessage() {
 // ── Wire events ────────────────────────────────────────────
 
 $("sendBtn")?.addEventListener("click", sendMessage);
-$("replyInput")?.addEventListener("keydown", (e) => {
+$("msgInput")?.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
 });
-$("newTicketBtn")?.addEventListener("click", openModal);
+
+$("newTicketBtn")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  openModal();
+});
+
+$("ticketSelector")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("ticketDropdown")?.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  const dd = $("ticketDropdown");
+  const bar = $("ticketBar");
+  if (dd && !dd.classList.contains("hidden") && bar && !bar.contains(e.target)) {
+    dd.classList.add("hidden");
+  }
+});
+
 $("modalCancelBtn")?.addEventListener("click", closeModal);
 $("modalSubmitBtn")?.addEventListener("click", handleTicketSubmit);
 $("ticketModal")?.addEventListener("click", (e) => {
@@ -292,11 +382,60 @@ $("ticketSubject")?.addEventListener("keydown", (e) => {
     handleTicketSubmit();
   }
 });
+
 $("logoutBtn")?.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
   window.location.href = "/frontend/login.html";
 });
 
+$("closeBanner")?.addEventListener("click", () => {
+  const banner = $("memoryBanner");
+  if (banner) {
+    banner.style.animation = "none";
+    banner.style.opacity = "0";
+    banner.style.transform = "translateY(-4px)";
+    banner.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+    setTimeout(() => { banner.style.display = "none"; }, 220);
+  }
+});
+
+document.querySelectorAll(".qr-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    const input = $("msgInput");
+    if (input) {
+      input.value = chip.dataset.text;
+      input.focus();
+    }
+  });
+});
+
+$("aiSuggestBtn")?.addEventListener("click", () => {
+  const btn = $("aiSuggestBtn");
+  btn?.classList.add("loading");
+
+  const suggestions = [
+    "I'm still experiencing the same issue. Can you help?",
+    "Can you check the status of my ticket?",
+    "I need help with a new problem related to the API.",
+    "Following up on this issue — any update?"
+  ];
+  const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+
+  setTimeout(() => {
+    const input = $("msgInput");
+    if (input) {
+      input.value = suggestion;
+      input.focus();
+      input.setSelectionRange(suggestion.length, suggestion.length);
+    }
+    btn?.classList.remove("loading");
+  }, 480);
+});
+
 // ── Init ───────────────────────────────────────────────────
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  const typingRow = $("typingRow");
+  if (typingRow) typingRow.style.display = "none";
+  init();
+});
