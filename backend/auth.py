@@ -31,9 +31,12 @@ def _verify_token(token: str) -> dict:
     user = client.auth.get_user(token)
     user_id = user.user.id
     email = user.user.email or ""
+    full_name = (
+        user.user.user_metadata.get("full_name") if user.user.user_metadata else None
+    )
 
     role = _get_user_role(user_id, client)
-    return {"user_id": user_id, "email": email, "role": role}
+    return {"user_id": user_id, "email": email, "role": role, "full_name": full_name}
 
 
 def _get_user_role(user_id: str, client=None) -> str:

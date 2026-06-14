@@ -50,10 +50,32 @@ function setLoading(loading) {
     : (isLogin ? "Sign In" : "Sign Up");
 }
 
-function roleRedirect(email) {
+async function ensureCustomerProfile() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session?.access_token) return;
+    
+    const response = await fetch(`${window.CONFIG.API_BASE}/my/setup-profile`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      }
+    });
+    
+    if (!response.ok) {
+      console.warn("Failed to setup customer profile:", response.status);
+    }
+  } catch (e) {
+    console.warn("Error setting up customer profile:", e);
+  }
+}
+
+async function roleRedirect(email) {
   if (email === ADMIN_EMAIL) {
     window.location.href = "./dashboard.html";
   } else {
+    await ensureCustomerProfile();
     window.location.href = "./chat.html";
   }
 }
@@ -126,13 +148,6 @@ async function signUp(email, password) {
     if (error) {
       showFormError(error.message);
       return;
-    }
-
-    if (data?.user) {
-      await supabaseClient.from("user_roles").insert({
-        user_id: data.user.id,
-        role: "customer",
-      });
     }
 
     showFormSuccess("Account created! Please verify your email.");

@@ -432,6 +432,35 @@ async def my_profile(user: dict = Depends(get_current_user)):
     return customer
 
 
+@app.post("/my/setup-profile")
+async def setup_my_profile(user: dict = Depends(get_current_user)):
+    """
+    Create a customer profile for the authenticated user if one doesn't exist.
+    Called by frontend after signup/email verification.
+    """
+    email = user.get("email", "")
+    user_id = user.get("user_id", "")
+
+    # Check if customer already exists
+    existing = await _get_customer_by_email(email)
+    if existing:
+        return existing
+
+    # Extract name from user metadata or email
+    full_name = user.get("full_name") or user.get("name") or email.split("@")[0]
+
+    # Create customer profile
+    req = CreateCustomerRequest(name=full_name, email=email)
+    customer = await create_customer(req)
+
+    logger.info(
+        "Customer profile auto-created on signup | customer_id=%s | email=%s",
+        customer.id,
+        email,
+    )
+    return customer
+
+
 @app.get("/my/tickets")
 async def my_tickets(user: dict = Depends(get_current_user)):
     email = user.get("email", "")
