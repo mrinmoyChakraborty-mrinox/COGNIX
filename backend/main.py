@@ -363,10 +363,20 @@ async def _get_customer_by_email(email: str) -> Customer | None:
             if c.email == email:
                 return c
         return None
-    client = get_supabase_client()
-    rows = client.table("customers").select("*").eq("email", email).limit(1).execute()
+    # Use the async repo client, not the sync auth client
+    from repositories.customer_repository import _get_client as _get_repo_client
+    from repositories.customer_repository import _row_to_customer
+
+    client = await _get_repo_client()
+    rows = (
+        await client.table("customers")
+        .select("*")
+        .eq("email", email)
+        .limit(1)
+        .execute()
+    )
     if rows.data and len(rows.data) > 0:
-        return Customer(**rows.data[0])
+        return _row_to_customer(rows.data[0])
     return None
 
 
@@ -374,32 +384,22 @@ async def _get_tickets_by_customer(customer_id: str) -> list[Ticket]:
     """Get tickets for a customer — mock-aware."""
     if USE_MOCK:
         return await get_tickets(customer_id)
-    client = get_supabase_client()
-    rows = (
-        client.table("tickets")
-        .select("*")
-        .eq("customer_id", customer_id)
-        .order("created_at", desc=True)
-        .execute()
-    )
-    return [Ticket(**r) for r in rows.data] if rows.data else []
+    # Already have get_tickets from ticket_repository — just use it directly
+    return await get_tickets(customer_id)
 
 
 async def _create_ticket_for_customer(customer_id: str, subject: str) -> Ticket:
     """Create a ticket and increment ticket_count — mock-aware."""
-    import uuid
-
-    ticket_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
     if USE_MOCK:
+        import uuid
         from dev.mock_repository import TICKETS, CUSTOMERS
 
         ticket = Ticket(
-            id=ticket_id,
+            id=str(uuid.uuid4()),
             customer_id=customer_id,
             subject=subject,
             status="open",
-            created_at=now,
+            created_at=datetime.now(timezone.utc),
         )
         TICKETS.setdefault(customer_id, []).insert(0, ticket.model_dump())
         for c in CUSTOMERS:
@@ -407,17 +407,8 @@ async def _create_ticket_for_customer(customer_id: str, subject: str) -> Ticket:
                 c["ticket_count"] = c.get("ticket_count", 0) + 1
                 break
         return ticket
-    client = get_supabase_client()
-    ticket = Ticket(
-        id=ticket_id,
-        customer_id=customer_id,
-        subject=subject,
-        status="open",
-        created_at=now,
-    )
-    client.table("tickets").insert(ticket.model_dump()).execute()
-    client.rpc("increment_ticket_count", {"cust_id": customer_id}).execute()
-    return ticket
+    # Use the existing async repo function — it handles increment too
+    return await create_ticket(customer_id, subject)
 
 
 @app.get("/my/profile")
