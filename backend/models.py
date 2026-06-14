@@ -76,6 +76,50 @@ class SupportResponse(BaseModel):
     suggested_solution: Optional[str] = None
 
 
+class ChatRequest(BaseModel):
+    customer_id: str
+    message: str
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        if len(v.strip()) < 1:
+            raise ValueError("message must be at least 1 character")
+        if len(v) > 2000:
+            raise ValueError("message must not exceed 2000 characters")
+        return v.strip()
+
+
+class CreateTicketRequest(BaseModel):
+    subject: str
+
+    @field_validator("subject")
+    @classmethod
+    def validate_subject(cls, v: str) -> str:
+        if len(v.strip()) < 1:
+            raise ValueError("subject must be at least 1 character")
+        return v.strip()
+
+
+class MyChatRequest(BaseModel):
+    message: str
+    ticket_id: Optional[str] = None
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        if len(v.strip()) < 1:
+            raise ValueError("message must be at least 1 character")
+        if len(v) > 2000:
+            raise ValueError("message must not exceed 2000 characters")
+        return v.strip()
+
+
+class MyChatResponse(BaseModel):
+    reply: str
+    suggested_solution: Optional[str] = None
+
+
 class CreateCustomerRequest(BaseModel):
     name: str
     email: str

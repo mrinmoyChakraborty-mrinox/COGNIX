@@ -50,7 +50,7 @@
       <div class="main">
         <!-- Top bar -->
         <header class="topbar">
-          <span class="topbar-title">Session with Mrinmoy</span>
+          <span class="topbar-title" id="sessionTitle">Session</span>
 
           <div class="topbar-search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21l-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
@@ -67,6 +67,9 @@
               class="avatar avatar-sm"
               alt="Agent avatar"
             /> -->
+           <button class="icon-btn" id="resolveTicketBtn" title="Resolve ticket" style="display:none">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+           </button>
            <img
             id="agentAvatar"
             class="avatar avatar-sm"
@@ -80,62 +83,6 @@
           <!-- ============ CHAT ============ -->
           <section class="chat">
             <div class="chat-messages">
-              <div class="msg msg-left">
-                <img
-                  src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1"
-                  class="avatar avatar-sm"
-                  alt="Mrinmoy"
-                />
-                <div class="msg-body">
-                  <div class="bubble bubble-incoming">
-                    Hey, I'm getting the same API timeout issue again. It's been happening every few hours now.
-                  </div>
-                  <span class="msg-time">10:24 AM</span>
-                </div>
-              </div>
-
-              <div class="msg msg-right">
-                <div class="msg-body">
-                  <div class="bubble bubble-outgoing">
-                    Hi Mrinmoy — I can see this is the third time you've hit this. Last time, switching to the eu-west-1 endpoint helped. Are you still on us-east-1?
-                    <span class="ai-tag">· AI assisted</span>
-                  </div>
-                  <span class="msg-time">10:25 AM</span>
-                </div>
-              </div>
-
-              <div class="msg msg-left">
-                <img
-                  src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1"
-                  class="avatar avatar-sm"
-                  alt="Mrinmoy"
-                />
-                <div class="msg-body">
-                  <div class="bubble bubble-incoming">
-                    Yeah still on us-east-1. We're on v2.3.1 now though, not 2.2.
-                  </div>
-                  <span class="msg-time">10:25 AM</span>
-                </div>
-              </div>
-
-              <!-- typing indicator -->
-              <!-- <div class="msg msg-right">
-                <div class="typing">
-                  <span></span><span></span><span></span>
-                </div>
-              </div>
-            </div> -->
-
-            <div class="msg msg-right">
-              <div class="msg-body">
-                <div class="bubble bubble-outgoing">
-                  Based on your history, this appears to be the same timeout pattern seen in previous sessions. I recommend switching to the eu-west-1 endpoint and increasing the request timeout to 90 seconds.
-                  <span class="ai-tag">· AI assisted</span>
-                </div>
-                <span class="msg-time">10:26 AM</span>
-              </div>
-            </div>
-
       </div>
             <!-- Reply bar -->
             <div class="reply-bar">
@@ -152,21 +99,22 @@
             <!-- Profile -->
             <div class="profile">
               <img
+                id="customerAvatar"
                 src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1"
                 class="avatar avatar-lg"
-                alt="Mrinmoy Chakraborty"
+                alt="Customer"
               />
               <div class="profile-info">
-                <div class="profile-name">Mrinmoy Chakraborty</div>
-                <div class="profile-meta">mrinmoy@acme.io · Pro plan</div>
+                <div class="profile-name" id="customerName">Customer</div>
+                <div class="profile-meta" id="customerEmail">Loading...</div>
               </div>
-              <div class="frustration-ring">
+              <div class="frustration-ring" id="profileFrustrationRing">
                 <svg width="56" height="56" style="transform: rotate(-90deg)">
                   <circle cx="28" cy="28" r="23" fill="none" stroke="#e2e5ea" stroke-width="5"></circle>
-                  <circle cx="28" cy="28" r="23" fill="none" stroke="#ef4444" stroke-width="5"
-                    stroke-dasharray="112.72034441080177 31.792917654328704" stroke-linecap="round"></circle>
+                  <circle id="frustrationCircle" cx="28" cy="28" r="23" fill="none" stroke="#ef4444" stroke-width="5"
+                    stroke-dasharray="0 144.51" stroke-linecap="round"></circle>
                 </svg>
-                <span class="frustration-value">78</span>
+                <span class="frustration-value" id="profileFrustrationScore">--</span>
               </div>
             </div>
 
@@ -235,69 +183,18 @@
               </ul>
             </div>
 
-            <!-- Memory Delta (highlighted) -->
-            <div class="panel-section memory-delta-section">
-              <div class="memory-delta-card">
-                <div class="memory-delta-header">
-                  <div class="memory-delta-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
-                  </div>
-                  <div class="memory-delta-heading">
-                    <span class="memory-delta-title">Memory delta</span>
-                    <span class="memory-delta-subtitle">New memories from this session</span>
-                  </div>
-                  <span class="live-badge"><span class="live-dot"></span>live</span>
-                </div>
+            <!-- Memory Retrieval Visualization -->
+            <div class="panel-section" id="memoryPanel"></div>
 
-                <div class="memory-delta-body">
-                  <div class="memory-item" data-kind="new">
-                    <span class="memory-item-icon plus">+</span>
-                    <div class="memory-item-text">
-                      <span class="memory-item-title">Prefers async support, avoid calls</span>
-                      <span class="memory-item-tag tag-preference">preference</span>
-                    </div>
-                  </div>
-                  <div class="memory-item" data-kind="new">
-                    <span class="memory-item-icon plus">+</span>
-                    <div class="memory-item-text">
-                      <span class="memory-item-title">Upgraded to SDK v2.3.1 this week</span>
-                      <span class="memory-item-tag tag-environment">environment</span>
-                    </div>
-                  </div>
-                  <div class="memory-item" data-kind="new">
-                    <span class="memory-item-icon plus">+</span>
-                    <div class="memory-item-text">
-                      <span class="memory-item-title">Recurring API timeout — 3rd occurrence in 30 days</span>
-                      <span class="memory-item-tag tag-issue">issue pattern</span>
-                    </div>
-                  </div>
-                  <div class="memory-item" data-kind="updated">
-                    <span class="memory-item-icon tilde">~</span>
-                    <div class="memory-item-text">
-                      <span class="memory-item-title">Reproducible on staging and prod (confirmed)</span>
-                      <span class="memory-item-tag tag-updated">updated</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="memory-delta-footer">
-                  <!-- <span class="memory-delta-count">4 memories queued</span> -->
-                   <span
-                    class="memory-delta-count"
-                    id="memoryCount"
-                  >
-                    Loading...
-                  </span>
-                  <button class="memory-delta-save" id="memorySaveBtn">Save to MemoryDesk</button>
-                </div>
-              </div>
-            </div>
+            <!-- Escalation Banner -->
+            <div id="escalationBanner" class="panel-section hidden"></div>
           </aside>
         </div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/frontend/js/config.js"></script>
     <script src="/frontend/js/liveagent.js"></script>
 
   </body>

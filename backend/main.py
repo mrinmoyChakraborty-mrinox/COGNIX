@@ -38,9 +38,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from models import (
+    ChatRequest,
     CreateCustomerRequest,
+    CreateTicketRequest,
     Customer,
     MemoryEntry,
+    MyChatRequest,
+    MyChatResponse,
     SupportRequest,
     SupportResponse,
     Ticket,
@@ -98,9 +102,9 @@ from memory import (
     seed_customer_memory,
     build_retrieval_viz,
 )
-from llm import generate_response
+from agent import generate_response
 
-from auth import get_current_user
+from auth import get_current_user, get_supabase_client, require_admin, verify_ws_token
 
 
 # ── startup / shutdown ───────────────────────────────────────
@@ -150,7 +154,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -208,13 +212,13 @@ async def health_check():
 
 
 @app.get("/customers", response_model=list[Customer])
-async def list_all_customers(user_id: str = Depends(get_current_user)):
+async def list_all_customers(_: dict = Depends(require_admin)):
     return await list_customers()
 
 
 @app.post("/customers", response_model=Customer, status_code=status.HTTP_201_CREATED)
 async def create_new_customer(
-    req: CreateCustomerRequest, user_id: str = Depends(get_current_user)
+    req: CreateCustomerRequest, _: dict = Depends(require_admin)
 ):
     customer: Customer = await create_customer(req)
 
@@ -236,9 +240,7 @@ async def create_new_customer(
 
 
 @app.get("/customers/{customer_id}", response_model=Customer)
-async def get_customer_by_id(
-    customer_id: str, user_id: str = Depends(get_current_user)
-):
+async def get_customer_by_id(customer_id: str, _: dict = Depends(require_admin)):
     customer = await get_customer(customer_id)
     if customer is None:
         raise HTTPException(
@@ -248,9 +250,7 @@ async def get_customer_by_id(
 
 
 @app.get("/customers/{customer_id}/memories", response_model=list[MemoryEntry])
-async def get_customer_memories(
-    customer_id: str, user_id: str = Depends(get_current_user)
-):
+async def get_customer_memories(customer_id: str, _: dict = Depends(require_admin)):
     customer = await get_customer(customer_id)
     if customer is None:
         raise HTTPException(
@@ -260,9 +260,7 @@ async def get_customer_memories(
 
 
 @app.get("/customers/{customer_id}/tickets", response_model=list[Ticket])
-async def get_customer_tickets(
-    customer_id: str, user_id: str = Depends(get_current_user)
-):
+async def get_customer_tickets(customer_id: str, _: dict = Depends(require_admin)):
     customer = await get_customer(customer_id)
     if customer is None:
         raise HTTPException(
@@ -272,7 +270,7 @@ async def get_customer_tickets(
 
 
 @app.post("/support/chat", response_model=SupportResponse)
-async def support_chat(req: SupportRequest, user_id: str = Depends(get_current_user)):
+async def support_chat(req: SupportRequest, _: dict = Depends(require_admin)):
     customer = await get_customer(req.customer_id)
     if customer is None:
         raise HTTPException(
@@ -309,11 +307,193 @@ async def support_chat(req: SupportRequest, user_id: str = Depends(get_current_u
     )
 
 
+@app.post("/chat", response_model=SupportResponse)
+async def customer_chat(req: ChatRequest, user: dict = Depends(get_current_user)):
+    customer = await get_customer(req.customer_id)
+    if customer is None:
+        raise HTTPException(
+            status_code=404, detail=f"Customer '{req.customer_id}' not found"
+        )
+
+    await ensure_bank(req.customer_id, customer.name)
+    memories, _ = await retrieve_memories(req.customer_id, req.message)
+    reflection = await reflect(req.customer_id, req.message)
+    response_text, suggested_solution = await generate_response(
+        customer, memories, req.message, reflection
+    )
+    await save_memory(
+        req.customer_id,
+        f'Customer: "{req.message[:120]}". Agent: "{response_text[:120]}".',
+        "support session",
+    )
+
+    frustration_score = customer.frustration_score
+    escalation_flag = frustration_score > 70
+
+    return SupportResponse(
+        response=response_text,
+        customer_name=customer.name,
+        retrieved_memories=memories,
+        memory_saved=True,
+        frustration_score=frustration_score,
+        escalation_flag=escalation_flag,
+        suggested_solution=suggested_solution,
+    )
+
+
+@app.patch("/tickets/{ticket_id}/resolve")
+async def resolve_ticket_endpoint(ticket_id: str, _: dict = Depends(require_admin)):
+    try:
+        ticket = await resolve_ticket(ticket_id)
+        return ticket
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Customer self-service endpoints ──────────────────────────
+
+
+async def _get_customer_by_email(email: str):
+    """Look up customer row by email — mock-aware."""
+    if USE_MOCK:
+        customers = await list_customers()
+        for c in customers:
+            if c.email == email:
+                return c
+        return None
+    client = get_supabase_client()
+    rows = client.table("customers").select("*").eq("email", email).limit(1).execute()
+    if rows.data and len(rows.data) > 0:
+        return rows.data[0]
+    return None
+
+
+async def _get_tickets_by_customer(customer_id: str):
+    """Get tickets for a customer — mock-aware."""
+    if USE_MOCK:
+        return await get_tickets(customer_id)
+    client = get_supabase_client()
+    rows = (
+        client.table("tickets")
+        .select("*")
+        .eq("customer_id", customer_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return rows.data if rows.data else []
+
+
+async def _create_ticket_for_customer(customer_id: str, subject: str):
+    """Create a ticket and increment ticket_count — mock-aware."""
+    import uuid
+
+    ticket_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    if USE_MOCK:
+        from dev.mock_repository import TICKETS, CUSTOMERS
+
+        ticket = {
+            "id": ticket_id,
+            "customer_id": customer_id,
+            "subject": subject,
+            "status": "open",
+            "created_at": now,
+            "resolved_at": None,
+        }
+        TICKETS.setdefault(customer_id, []).insert(0, ticket)
+        for c in CUSTOMERS:
+            if c["id"] == customer_id:
+                c["ticket_count"] = c.get("ticket_count", 0) + 1
+                break
+        return ticket
+    client = get_supabase_client()
+    ticket = {
+        "id": ticket_id,
+        "customer_id": customer_id,
+        "subject": subject,
+        "status": "open",
+        "created_at": now,
+    }
+    client.table("tickets").insert(ticket).execute()
+    client.rpc("increment_ticket_count", {"cust_id": customer_id}).execute()
+    return ticket
+
+
+@app.get("/my/profile")
+async def my_profile(user: dict = Depends(get_current_user)):
+    email = user.get("email", "")
+    customer = await _get_customer_by_email(email)
+    if customer is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Customer profile not found — contact support",
+        )
+    return customer
+
+
+@app.get("/my/tickets")
+async def my_tickets(user: dict = Depends(get_current_user)):
+    email = user.get("email", "")
+    customer = await _get_customer_by_email(email)
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer profile not found")
+    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
+    tickets = await _get_tickets_by_customer(customer_id)
+    return tickets
+
+
+@app.post("/my/tickets")
+async def create_my_ticket(
+    req: CreateTicketRequest, user: dict = Depends(get_current_user)
+):
+    email = user.get("email", "")
+    customer = await _get_customer_by_email(email)
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer profile not found")
+    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
+    ticket = await _create_ticket_for_customer(customer_id, req.subject)
+    return ticket
+
+
+@app.post("/my/chat")
+async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
+    email = user.get("email", "")
+    customer = await _get_customer_by_email(email)
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer profile not found")
+    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
+    customer_name = customer["name"] if isinstance(customer, dict) else customer.name
+
+    await ensure_bank(customer_id, customer_name)
+    memories, _ = await retrieve_memories(customer_id, req.message)
+    reflection = await reflect(customer_id, req.message)
+
+    response_text, suggested_solution = await generate_response(
+        {"id": customer_id, "name": customer_name}, memories, req.message, reflection
+    )
+
+    await save_memory(
+        customer_id,
+        f'Customer: "{req.message[:120]}". Agent: "{response_text[:120]}".',
+        "support session",
+    )
+
+    return MyChatResponse(reply=response_text, suggested_solution=suggested_solution)
+
+
 # ── WebSocket ────────────────────────────────────────────────
 
 
 @app.websocket("/ws/session/{customer_id}")
-async def websocket_session(websocket: WebSocket, customer_id: str):
+async def websocket_session(
+    websocket: WebSocket, customer_id: str, token: str | None = None
+):
+    # Verify auth for WebSocket (admin-only)
+    user = await verify_ws_token(token)
+    if user is None and not USE_MOCK:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
     await websocket.accept()
     logger.info("WebSocket connected | customer_id=%s", customer_id)
 

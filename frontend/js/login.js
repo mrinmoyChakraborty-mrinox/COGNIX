@@ -1,16 +1,10 @@
-
-const SUPABASE_URL =
-"https://ckjypqgnkovsdezsjjqo.supabase.co";
-
-const SUPABASE_ANON_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
+const { ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY } = window.CONFIG;
 
 const supabaseClient =
 window.supabase.createClient(
 SUPABASE_URL,
 SUPABASE_ANON_KEY
 );
-
 
 const toggleBtn =
 document.getElementById("toggleBtn");
@@ -35,9 +29,13 @@ document.querySelector(".primary-btn");
 
 let isLogin = true;
 
-
-// TOGGLE LOGIN / SIGNUP
-
+function roleRedirect(email) {
+  if (email === ADMIN_EMAIL) {
+    window.location.href = "/frontend/dashboard.html";
+  } else {
+    window.location.href = "/frontend/chat.html";
+  }
+}
 
 toggleBtn.addEventListener(
 "click",
@@ -93,9 +91,6 @@ confirmPasswordField.classList.remove("hidden");
 
 });
 
-// EMAIL SIGNUP
-
-
 async function signUp(
  email,
  password
@@ -106,9 +101,7 @@ async function signUp(
  .getElementById("fullName")
  .value;
 
- const {
- error
- }
+ const { data, error }
  =
  await supabaseClient.auth.signUp({
 
@@ -129,15 +122,18 @@ return;
 
 }
 
+if (data?.user) {
+  await supabaseClient.from('user_roles').insert({
+    user_id: data.user.id,
+    role: 'customer'
+  });
+}
+
 alert(
 "Account created! Please verify your email."
 );
 
 }
-
-
-// EMAIL LOGIN
-
 
 async function signIn(email,password){
 
@@ -156,9 +152,7 @@ async function signIn(email,password){
  }
 
  alert("Login Success");
-
- window.location.href =
- "dashboard.html";
+ roleRedirect(email);
 }
 
 // =========================
@@ -224,7 +218,6 @@ password
 
 // GOOGLE LOGIN
 
-
 document
 .querySelector(".google-btn")
 .addEventListener(
@@ -243,7 +236,7 @@ options:{
 
 redirectTo:
 window.location.origin +
-"/dashboard.html"
+"/frontend/login.html"
 
 }
 
@@ -258,9 +251,13 @@ alert(error.message);
 }
 );
 
-
-// CHECK SESSION
-
+// Handle OAuth callback — detect session after redirect
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    const email = session.user.email;
+    if (email) roleRedirect(email);
+  }
+});
 
 async function checkSession(){
 
@@ -270,14 +267,11 @@ data:{session}
 =
 await supabaseClient.auth.getSession();
 
-if(session){
-
-window.location.href =
-"/dashboard.html";
-
+if(session?.user){
+  const email = session.user.email;
+  if (email) roleRedirect(email);
 }
 
 }
 
 checkSession();
-
