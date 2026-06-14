@@ -1,7 +1,23 @@
+const ADMIN_EMAIL = "your-admin@email.com";
 const API_BASE = 'http://localhost:8000';
-const CUSTOMER_ID = 'cust_demo_001';
+const SUPABASE_URL = "https://ckjypqgnkovsdezsjjqo.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const CUSTOMER_ID = params.get('customer_id');
 
 (async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || session.user.email !== ADMIN_EMAIL) {
+    window.location.href = "/frontend/chat.html";
+    return;
+  }
+  if (!CUSTOMER_ID) {
+    showError('No customer selected.');
+    return;
+  }
   showSkeleton(true);
   try {
     const [customer, tickets, memories] = await Promise.all([
@@ -27,7 +43,10 @@ const CUSTOMER_ID = 'cust_demo_001';
 })();
 
 async function fetchJSON(path) {
-  const res = await fetch(`${API_BASE}${path}`);
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const headers = { "Accept": "application/json" };
+  if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+  const res = await fetch(`${API_BASE}${path}`, { headers });
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText} for ${path}`);
   }

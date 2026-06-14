@@ -1,3 +1,5 @@
+const ADMIN_EMAIL = "your-admin@email.com";
+
 const SUPABASE_URL = "https://ckjypqgnkovsdezsjjqo.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
 
@@ -50,7 +52,7 @@ async function apiFetch(path) {
   const res = await fetch(`${API_BASE}${path}`, { headers });
   if (res.status === 401) {
     await supabaseClient.auth.signOut();
-    window.location.href = "/login.html";
+    window.location.href = "/frontend/login.html";
     return null;
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -82,6 +84,7 @@ function renderQueue(customers, ticketsByCust) {
     const ts = ticketsByCust[c.id] || [];
     const open = ts.filter((t) => t.status === "open");
     const latest = open.length > 0 ? open[0] : ts[0];
+    const latestId = latest?.id;
     const color = frustrationColor(c.frustration_score);
     const isHigh = c.frustration_score >= 75;
     const initials = c.name.split(" ").map((s) => s[0]).join("").toUpperCase().slice(0, 2);
@@ -111,7 +114,10 @@ function renderQueue(customers, ticketsByCust) {
           </svg>
           <span class="frustration-score" style="color:${color}">${c.frustration_score}</span>
         </div>
-        <button class="start-session-btn" data-customer-id="${esc(c.id)}">Start session</button>
+        <div class="ticket-action-btns">
+          ${latestId && open.length > 0 ? `<button class="resolve-btn" data-ticket-id="${esc(latestId)}">Resolve</button>` : ""}
+          <button class="start-session-btn" data-customer-id="${esc(c.id)}">Start session</button>
+        </div>
       </div>
     `;
 
@@ -122,7 +128,32 @@ function renderQueue(customers, ticketsByCust) {
   list.querySelectorAll(".start-session-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cid = btn.dataset.customerId;
-      console.log(`Start session with ${cid}`);
+      window.location.href = `/frontend/liveagent.html?customer_id=${cid}`;
+    });
+  });
+
+  // Wire resolve buttons
+  list.querySelectorAll(".resolve-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const ticketId = btn.dataset.ticketId;
+      btn.disabled = true;
+      btn.textContent = "...";
+      try {
+        const token = await getSessionToken();
+        const headers = { "Accept": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        await fetch(`${API_BASE}/tickets/${ticketId}/resolve`, {
+          method: "PATCH",
+          headers,
+        });
+        btn.textContent = "Done ✓";
+        btn.style.background = "#22c55e";
+        btn.style.color = "#fff";
+      } catch {
+        btn.disabled = false;
+        btn.textContent = "Resolve";
+      }
     });
   });
 }
@@ -262,6 +293,11 @@ async function loadUser() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     window.location.href = "/frontend/login.html";
+    return;
+  }
+
+  if (session.user.email !== ADMIN_EMAIL) {
+    window.location.href = "/frontend/chat.html";
     return;
   }
 
