@@ -27,24 +27,29 @@ logger = logging.getLogger("cognix.agent")
 
 load_dotenv()
 
-# ── Model init ───────────────────────────────────────────────
+# ── Model init (lazy) ────────────────────────────────────────
+# Initialised on first call so mock mode works without the API key.
 
-_groq_api_key = os.getenv("GROQ_API_KEY")
-if not _groq_api_key:
-    raise ValueError("GROQ_API_KEY not found. Add it to your .env file.")
+_model = None
 
-# qwen3-32b is the recommended model from the problem statement.
-# It handles structured output and function calling well.
-# Fallback: "openai/gpt-4o" if qwen has issues during the hackathon.
-_model = GroqModel(
-    "qwen/qwen3-32b",
-    provider=GroqProvider(api_key=_groq_api_key),
-)
+
+def _get_model() -> GroqModel:
+    global _model
+    if _model is None:
+        key = os.getenv("GROQ_API_KEY")
+        if not key:
+            raise RuntimeError("GROQ_API_KEY is not set")
+        _model = GroqModel(
+            "qwen/qwen3-32b",
+            provider=GroqProvider(api_key=key),
+        )
+    return _model
 
 
 # ── Structured output schema ─────────────────────────────────
 # One schema, one LLM call, all fields returned together.
 # This is the core performance optimisation — 5 calls → 1 call.
+
 
 class SupportResult(BaseModel):
     """
@@ -52,6 +57,7 @@ class SupportResult(BaseModel):
     PydanticAI enforces this schema against the LLM output — if the
     model returns garbage, it retries automatically (up to 3 times).
     """
+
     response: str = Field(
         description=(
             "The reply sent directly to the customer. "
@@ -79,14 +85,14 @@ class SupportResult(BaseModel):
     )
     escalation_reason: Optional[str] = Field(
         default=None,
-        description="Why the ticket is being escalated. Null if escalation_flag is false."
+        description="Why the ticket is being escalated. Null if escalation_flag is false.",
     )
     suggested_solution: Optional[str] = Field(
         default=None,
         description=(
             "A concise recommended fix for the agent panel. "
             "One or two sentences max. Null if the issue is unclear."
-        )
+        ),
     )
     memory_summary: str = Field(
         description=(
@@ -97,27 +103,35 @@ class SupportResult(BaseModel):
     )
 
 
-# ── Agent ────────────────────────────────────────────────────
+# ── Agent (lazy) ─────────────────────────────────────────────
 
-_agent = Agent(
-    _model,
-    output_type=SupportResult,
-    system_prompt=(
-        "You are a senior customer support agent with access to the customer's "
-        "full support history. Your job is to resolve issues, not ask customers "
-        "to repeat themselves.\n\n"
-        "Rules:\n"
-        "- Use retrieved memories to infer context from vague messages.\n"
-        "- Never invent history that is not in the provided memories.\n"
-        "- Be empathetic but concise — customers want resolution, not sympathy.\n"
-        "- Escalate proactively if you see risk signals.\n"
-        "- Write memory_summary as if it will be read by a support agent "
-        "6 months from now who has never seen this conversation."
-    ),
-)
+_agent = None
+
+
+def _get_agent() -> Agent:
+    global _agent
+    if _agent is None:
+        _agent = Agent(
+            _get_model(),
+            output_type=SupportResult,
+            system_prompt=(
+                "You are a senior customer support agent with access to the customer's "
+                "full support history. Your job is to resolve issues, not ask customers "
+                "to repeat themselves.\n\n"
+                "Rules:\n"
+                "- Use retrieved memories to infer context from vague messages.\n"
+                "- Never invent history that is not in the provided memories.\n"
+                "- Be empathetic but concise — customers want resolution, not sympathy.\n"
+                "- Escalate proactively if you see risk signals.\n"
+                "- Write memory_summary as if it will be read by a support agent "
+                "6 months from now who has never seen this conversation."
+            ),
+        )
+    return _agent
 
 
 # ── Context builder ──────────────────────────────────────────
+
 
 def _build_prompt(
     customer: Customer,
@@ -150,16 +164,12 @@ def _build_prompt(
         f"ID:               {customer.id}\n"
         f"Tickets so far:   {customer.ticket_count}\n"
         f"Frustration:      {customer.frustration_score}/100 (prior sessions)\n\n"
-
         "=== RETRIEVED MEMORIES (from Hindsight) ===\n"
         f"{memory_lines}\n\n"
-
         "=== HINDSIGHT REFLECTION ===\n"
         f"{reflection_text}\n\n"
-
         "=== CURRENT CUSTOMER MESSAGE ===\n"
         f"{message}\n\n"
-
         "=== YOUR TASK ===\n"
         "Respond to the customer's message using all available context above. "
         "Fill every field in the structured output. "
@@ -173,10 +183,11 @@ def _build_prompt(
 # model timeout, quota exceeded). The demo degrades gracefully
 # rather than crashing.
 
+
 def _kw(text: str, patterns: list[str]) -> bool:
     """Whole-word keyword match, case-insensitive."""
     t = text.lower()
-    return any(re.search(r'\b' + re.escape(p) + r'\b', t) for p in patterns)
+    return any(re.search(r"\b" + re.escape(p) + r"\b", t) for p in patterns)
 
 
 def _fallback_result(customer: Customer, message: str) -> SupportResult:
@@ -187,23 +198,58 @@ def _fallback_result(customer: Customer, message: str) -> SupportResult:
     msg = message.lower()
 
     # Frustration score
-    if _kw(msg, ["terrible","worst","sucks","broken","useless","hate","furious","sue","lawyer","refund","cancel"]):
+    if _kw(
+        msg,
+        [
+            "terrible",
+            "worst",
+            "sucks",
+            "broken",
+            "useless",
+            "hate",
+            "furious",
+            "sue",
+            "lawyer",
+            "refund",
+            "cancel",
+        ],
+    ):
         score, label = 85, "Highly Frustrated"
-    elif _kw(msg, ["issue","error","problem","bug","timeout","wrong","cannot","help"]):
+    elif _kw(
+        msg, ["issue", "error", "problem", "bug", "timeout", "wrong", "cannot", "help"]
+    ):
         score, label = 50, "Mild"
     else:
         score, label = 15, "Calm"
 
     # Escalation
-    escalate = score >= 85 or _kw(msg, ["again","third time","repeated","still not","legal","sue","refund","dispute"])
-    esc_reason = "Escalation triggered by heuristic fallback — review manually." if escalate else None
+    escalate = score >= 85 or _kw(
+        msg,
+        [
+            "again",
+            "third time",
+            "repeated",
+            "still not",
+            "legal",
+            "sue",
+            "refund",
+            "dispute",
+        ],
+    )
+    esc_reason = (
+        "Escalation triggered by heuristic fallback — review manually."
+        if escalate
+        else None
+    )
 
     # Suggested solution
-    if _kw(msg, ["password","login","signin","sign in"]):
+    if _kw(msg, ["password", "login", "signin", "sign in"]):
         solution = "Reset password and clear session cache."
-    elif _kw(msg, ["timeout","slow","latency","ingest"]):
-        solution = "Increase payload size limit in SDK config (try max_payload_size='10mb')."
-    elif _kw(msg, ["billing","invoice","payment","card"]):
+    elif _kw(msg, ["timeout", "slow", "latency", "ingest"]):
+        solution = (
+            "Increase payload size limit in SDK config (try max_payload_size='10mb')."
+        )
+    elif _kw(msg, ["billing", "invoice", "payment", "card"]):
         solution = "Verify payment method and retry transaction."
     else:
         solution = None
@@ -226,7 +272,23 @@ def _fallback_result(customer: Customer, message: str) -> SupportResult:
     )
 
 
+# ── llm.py compatibility wrapper ─────────────────────────────
+# Provides `generate_response(customer, memories, message, reflection)`
+# with the same signature that main.py previously imported from llm.py.
+
+
+async def generate_response(
+    customer: Customer,
+    memories: list[MemoryEntry],
+    message: str,
+    reflection: str,
+) -> tuple[str, str | None]:
+    result = await generate_support_response(customer, memories, message, reflection)
+    return result.response, result.suggested_solution
+
+
 # ── Public API ───────────────────────────────────────────────
+
 
 async def generate_support_response(
     customer: Customer,
@@ -266,6 +328,7 @@ async def generate_support_response(
     except Exception as exc:
         logger.warning(
             "LLM call failed, using heuristic fallback | customer_id=%s | error=%s",
-            customer.id, exc,
+            customer.id,
+            exc,
         )
         return _fallback_result(customer, message)

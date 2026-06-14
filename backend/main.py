@@ -102,7 +102,7 @@ from memory import (
     seed_customer_memory,
     build_retrieval_viz,
 )
-from llm import generate_response
+from agent import generate_response
 
 from auth import get_current_user, get_supabase_client, require_admin, verify_ws_token
 
@@ -154,7 +154,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
