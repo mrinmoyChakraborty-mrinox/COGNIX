@@ -1,0 +1,983 @@
+<div
+  class="export-wrapper"
+  style="
+    width: 1440px;
+    min-height: 812px;
+    position: relative;
+    font-family: var(--font-family-body);
+    background-color: var(--background);
+  "
+>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <html>
+    <head>
+      <style>
+        /*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
+        @layer properties;
+        @layer theme, base, components, utilities;
+        @layer theme {
+          :root {
+            --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --spacing: 0.25rem;
+            --container-sm: 24rem;
+            --container-2xl: 42rem;
+            --text-xs: 11px;
+            --text-xs--line-height: calc(1 / 0.75);
+            --text-sm: 13px;
+            --text-sm--line-height: calc(1.25 / 0.875);
+            --text-base: 14px;
+            --text-base--line-height: calc(1.5 / 1);
+            --text-lg: 16px;
+            --text-lg--line-height: calc(1.75 / 1.125);
+            --text-xl: 20px;
+            --text-xl--line-height: calc(1.75 / 1.25);
+            --text-2xl: 24px;
+            --text-2xl--line-height: calc(2 / 1.5);
+            --text-3xl: 30px;
+            --text-3xl--line-height: calc(2.25 / 1.75);
+            --font-weight-normal: 400;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            --font-weight-bold: 700;
+            --tracking-wide: 0.025em;
+            --leading-tight: 1.25;
+            --leading-relaxed: 1.625;
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 20px;
+            --default-font-family: var(--font-sans);
+            --default-mono-font-family: var(--font-mono);
+            --color-background: #f5f6f8;
+            --color-foreground: #0f1117;
+            --color-border: #e2e5ea;
+            --color-input: #f0f2f5;
+            --color-primary: #5b5ef4;
+            --color-primary-foreground: #ffffff;
+            --color-secondary: #ede9fe;
+            --color-secondary-foreground: #5b5ef4;
+            --color-muted: #e8eaed;
+            --color-muted-foreground: #7a7f8c;
+            --color-sidebar: #12141c;
+            --color-sidebar-foreground: #8b90a0;
+            --color-card: #ffffff;
+            --color-success: #22c55e;
+            --color-success-foreground: #ffffff;
+            --color-warning: #f59e0b;
+            --color-warning-foreground: #ffffff;
+            --color-danger: #ef4444;
+            --color-danger-foreground: #ffffff;
+            --font-body: Inter;
+            --font-headings: Inter;
+          }
+        }
+        @layer base {
+          *, ::after, ::before, ::backdrop, ::file-selector-button {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            border: 0 solid;
+          }
+          html, :root {
+            line-height: 1.5;
+            -webkit-text-size-adjust: 100%;
+            tab-size: 4;
+            font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+            font-feature-settings: var(--default-font-feature-settings, normal);
+            font-variation-settings: var(--default-font-variation-settings, normal);
+            -webkit-tap-highlight-color: transparent;
+          }
+          hr { height: 0; color: inherit; border-top-width: 1px; }
+          abbr:where([title]) { -webkit-text-decoration: underline dotted; text-decoration: underline dotted; }
+          h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+          a { color: inherit; -webkit-text-decoration: inherit; text-decoration: inherit; }
+          b, strong { font-weight: bolder; }
+          code, kbd, samp, pre { font-family: var(--default-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace); font-feature-settings: var(--default-mono-font-feature-settings, normal); font-variation-settings: var(--default-mono-font-variation-settings, normal); font-size: 1em; }
+          small { font-size: 80%; }
+          sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
+          sup { top: -0.5em; }
+          sub { bottom: -0.25em; }
+          table { text-indent: 0; border-color: inherit; border-collapse: collapse; }
+          :-moz-focusring { outline: auto; }
+          progress { vertical-align: baseline; }
+          summary { display: list-item; }
+          ol, ul, menu { list-style: none; }
+          img, svg, video, canvas, audio, iframe, embed, object { display: block; vertical-align: middle; }
+          img, video { max-width: 100%; height: auto; }
+          button, input, select, optgroup, textarea, ::file-selector-button { font: inherit; font-feature-settings: inherit; font-variation-settings: inherit; letter-spacing: inherit; color: inherit; border-radius: 0; background-color: transparent; opacity: 1; }
+          :where(select:is([multiple], [size])) optgroup { font-weight: bolder; }
+          :where(select:is([multiple], [size])) optgroup option { padding-inline-start: 20px; }
+          ::file-selector-button { margin-inline-end: 4px; }
+          ::placeholder { opacity: 1; }
+          @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
+            ::placeholder { color: currentcolor; @supports (color: color-mix(in lab, red, red)) { color: color-mix(in oklab, currentcolor 50%, transparent); } }
+          }
+          textarea { resize: vertical; }
+          ::-webkit-search-decoration { -webkit-appearance: none; }
+          ::-webkit-date-and-time-value { min-height: 1lh; text-align: inherit; }
+          ::-webkit-datetime-edit { display: inline-flex; }
+          ::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+          ::-webkit-datetime-edit, ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field, ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field, ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field { padding-block: 0; }
+          ::-webkit-calendar-picker-indicator { line-height: 1; }
+          :-moz-ui-invalid { box-shadow: none; }
+          button, input:where([type="button"], [type="reset"], [type="submit"]), ::file-selector-button { appearance: button; }
+          ::-webkit-inner-spin-button, ::-webkit-outer-spin-button { height: auto; }
+          [hidden]:where(:not([hidden="until-found"])) { display: none !important; }
+        }
+        @layer utilities {
+          .visible { visibility: visible; }
+          .absolute { position: absolute; }
+          .relative { position: relative; }
+          .top-1 { top: calc(var(--spacing) * 1); }
+          .right-1 { right: calc(var(--spacing) * 1); }
+          .right-2 { right: calc(var(--spacing) * 2); }
+          .right-3 { right: calc(var(--spacing) * 3); }
+          .bottom-6 { bottom: calc(var(--spacing) * 6); }
+          .left-1\/2 { left: calc(1 / 2 * 100%); }
+          .mx-8 { margin-inline: calc(var(--spacing) * 8); }
+          .mx-auto { margin-inline: auto; }
+          .mt-0\.5 { margin-top: calc(var(--spacing) * 0.5); }
+          .mt-1 { margin-top: calc(var(--spacing) * 1); }
+          .mt-2 { margin-top: calc(var(--spacing) * 2); }
+          .mt-3 { margin-top: calc(var(--spacing) * 3); }
+          .mt-4 { margin-top: calc(var(--spacing) * 4); }
+          .mt-5 { margin-top: calc(var(--spacing) * 5); }
+          .mt-6 { margin-top: calc(var(--spacing) * 6); }
+          .mt-auto { margin-top: auto; }
+          .mb-0 { margin-bottom: calc(var(--spacing) * 0); }
+          .mb-1 { margin-bottom: calc(var(--spacing) * 1); }
+          .mb-2 { margin-bottom: calc(var(--spacing) * 2); }
+          .mb-2\.5 { margin-bottom: calc(var(--spacing) * 2.5); }
+          .mb-3 { margin-bottom: calc(var(--spacing) * 3); }
+          .mb-4 { margin-bottom: calc(var(--spacing) * 4); }
+          .mb-5 { margin-bottom: calc(var(--spacing) * 5); }
+          .mb-6 { margin-bottom: calc(var(--spacing) * 6); }
+          .mb-8 { margin-bottom: calc(var(--spacing) * 8); }
+          .mb-10 { margin-bottom: calc(var(--spacing) * 10); }
+          .ml-2 { margin-left: calc(var(--spacing) * 2); }
+          .ml-3 { margin-left: calc(var(--spacing) * 3); }
+          .ml-4 { margin-left: calc(var(--spacing) * 4); }
+          .ml-auto { margin-left: auto; }
+          .mr-1 { margin-right: calc(var(--spacing) * 1); }
+          .mr-2 { margin-right: calc(var(--spacing) * 2); }
+          .mr-3 { margin-right: calc(var(--spacing) * 3); }
+          .block { display: block; }
+          .flex { display: flex; }
+          .grid { display: grid; }
+          .inline-flex { display: inline-flex; }
+          .h-1\.5 { height: calc(var(--spacing) * 1.5); }
+          .h-2 { height: calc(var(--spacing) * 2); }
+          .h-2\.5 { height: calc(var(--spacing) * 2.5); }
+          .h-6 { height: calc(var(--spacing) * 6); }
+          .h-7 { height: calc(var(--spacing) * 7); }
+          .h-8 { height: calc(var(--spacing) * 8); }
+          .h-9 { height: calc(var(--spacing) * 9); }
+          .h-10 { height: calc(var(--spacing) * 10); }
+          .h-12 { height: calc(var(--spacing) * 12); }
+          .h-14 { height: calc(var(--spacing) * 14); }
+          .h-16 { height: calc(var(--spacing) * 16); }
+          .h-24 { height: calc(var(--spacing) * 24); }
+          .h-72 { height: calc(var(--spacing) * 72); }
+          .h-full { height: 100%; }
+          .min-h-0 { min-height: calc(var(--spacing) * 0); }
+          .min-h-full { min-height: 100%; }
+          .w-1\.5 { width: calc(var(--spacing) * 1.5); }
+          .w-2 { width: calc(var(--spacing) * 2); }
+          .w-2\.5 { width: calc(var(--spacing) * 2.5); }
+          .w-6 { width: calc(var(--spacing) * 6); }
+          .w-7 { width: calc(var(--spacing) * 7); }
+          .w-8 { width: calc(var(--spacing) * 8); }
+          .w-9 { width: calc(var(--spacing) * 9); }
+          .w-10 { width: calc(var(--spacing) * 10); }
+          .w-12 { width: calc(var(--spacing) * 12); }
+          .w-14 { width: calc(var(--spacing) * 14); }
+          .w-16 { width: calc(var(--spacing) * 16); }
+          .w-20 { width: calc(var(--spacing) * 20); }
+          .w-28 { width: calc(var(--spacing) * 28); }
+          .w-48 { width: calc(var(--spacing) * 48); }
+          .w-72 { width: calc(var(--spacing) * 72); }
+          .w-80 { width: calc(var(--spacing) * 80); }
+          .w-full { width: 100%; }
+          .w-px { width: 1px; }
+          .max-w-2xl { max-width: var(--container-2xl); }
+          .max-w-sm { max-width: var(--container-sm); }
+          .min-w-0 { min-width: calc(var(--spacing) * 0); }
+          .flex-1 { flex: 1; }
+          .flex-shrink-0 { flex-shrink: 0; }
+          .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+          .flex-col { flex-direction: column; }
+          .flex-row-reverse { flex-direction: row-reverse; }
+          .flex-wrap { flex-wrap: wrap; }
+          .items-center { align-items: center; }
+          .items-end { align-items: flex-end; }
+          .items-start { align-items: flex-start; }
+          .justify-between { justify-content: space-between; }
+          .justify-center { justify-content: center; }
+          .gap-0 { gap: calc(var(--spacing) * 0); }
+          .gap-0\.5 { gap: calc(var(--spacing) * 0.5); }
+          .gap-1 { gap: calc(var(--spacing) * 1); }
+          .gap-1\.5 { gap: calc(var(--spacing) * 1.5); }
+          .gap-2 { gap: calc(var(--spacing) * 2); }
+          .gap-2\.5 { gap: calc(var(--spacing) * 2.5); }
+          .gap-3 { gap: calc(var(--spacing) * 3); }
+          .gap-4 { gap: calc(var(--spacing) * 4); }
+          .gap-5 { gap: calc(var(--spacing) * 5); }
+          .gap-6 { gap: calc(var(--spacing) * 6); }
+          .gap-8 { gap: calc(var(--spacing) * 8); }
+          .gap-10 { gap: calc(var(--spacing) * 10); }
+          .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .overflow-hidden { overflow: hidden; }
+          .rounded-full { border-radius: calc(infinity * 1px); }
+          .rounded-lg { border-radius: var(--radius-lg); }
+          .rounded-md { border-radius: var(--radius-md); }
+          .rounded-sm { border-radius: var(--radius-sm); }
+          .rounded-xl { border-radius: var(--radius-xl); }
+          .border { border-style: var(--tw-border-style); border-width: 1px; }
+          .border-t { border-top-style: var(--tw-border-style); border-top-width: 1px; }
+          .border-r-2 { border-right-style: var(--tw-border-style); border-right-width: 2px; }
+          .border-b { border-bottom-style: var(--tw-border-style); border-bottom-width: 1px; }
+          .border-l { border-left-style: var(--tw-border-style); border-left-width: 1px; }
+          .border-border { border-color: var(--color-border); }
+          .border-danger { border-color: var(--color-danger); }
+          .border-primary { border-color: var(--color-primary); }
+          .border-secondary-foreground { border-color: var(--color-secondary-foreground); }
+          .border-success { border-color: var(--color-success); }
+          .border-warning { border-color: var(--color-warning); }
+          .bg-background { background-color: var(--color-background); }
+          .bg-border { background-color: var(--color-border); }
+          .bg-card { background-color: var(--color-card); }
+          .bg-danger { background-color: var(--color-danger); }
+          .bg-foreground { background-color: var(--color-foreground); }
+          .bg-input { background-color: var(--color-input); }
+          .bg-muted { background-color: var(--color-muted); }
+          .bg-primary { background-color: var(--color-primary); }
+          .bg-primary-foreground { background-color: var(--color-primary-foreground); }
+          .bg-secondary { background-color: var(--color-secondary); }
+          .bg-sidebar { background-color: var(--color-sidebar); }
+          .bg-success { background-color: var(--color-success); }
+          .bg-warning { background-color: var(--color-warning); }
+          .p-3 { padding: calc(var(--spacing) * 3); }
+          .p-4 { padding: calc(var(--spacing) * 4); }
+          .p-5 { padding: calc(var(--spacing) * 5); }
+          .p-6 { padding: calc(var(--spacing) * 6); }
+          .px-1\.5 { padding-inline: calc(var(--spacing) * 1.5); }
+          .px-2 { padding-inline: calc(var(--spacing) * 2); }
+          .px-2\.5 { padding-inline: calc(var(--spacing) * 2.5); }
+          .px-3 { padding-inline: calc(var(--spacing) * 3); }
+          .px-3\.5 { padding-inline: calc(var(--spacing) * 3.5); }
+          .px-4 { padding-inline: calc(var(--spacing) * 4); }
+          .px-5 { padding-inline: calc(var(--spacing) * 5); }
+          .px-6 { padding-inline: calc(var(--spacing) * 6); }
+          .px-8 { padding-inline: calc(var(--spacing) * 8); }
+          .px-16 { padding-inline: calc(var(--spacing) * 16); }
+          .py-0\.5 { padding-block: calc(var(--spacing) * 0.5); }
+          .py-1 { padding-block: calc(var(--spacing) * 1); }
+          .py-1\.5 { padding-block: calc(var(--spacing) * 1.5); }
+          .py-2 { padding-block: calc(var(--spacing) * 2); }
+          .py-2\.5 { padding-block: calc(var(--spacing) * 2.5); }
+          .py-3 { padding-block: calc(var(--spacing) * 3); }
+          .py-3\.5 { padding-block: calc(var(--spacing) * 3.5); }
+          .py-4 { padding-block: calc(var(--spacing) * 4); }
+          .py-6 { padding-block: calc(var(--spacing) * 6); }
+          .py-8 { padding-block: calc(var(--spacing) * 8); }
+          .py-10 { padding-block: calc(var(--spacing) * 10); }
+          .py-16 { padding-block: calc(var(--spacing) * 16); }
+          .pt-0\.5 { padding-top: calc(var(--spacing) * 0.5); }
+          .pt-28 { padding-top: calc(var(--spacing) * 28); }
+          .pb-5 { padding-bottom: calc(var(--spacing) * 5); }
+          .pb-6 { padding-bottom: calc(var(--spacing) * 6); }
+          .pb-8 { padding-bottom: calc(var(--spacing) * 8); }
+          .pb-20 { padding-bottom: calc(var(--spacing) * 20); }
+          .pl-0 { padding-left: calc(var(--spacing) * 0); }
+          .text-center { text-align: center; }
+          .text-left { text-align: left; }
+          .text-right { text-align: right; }
+          .font-body { font-family: var(--font-body); }
+          .font-headings { font-family: var(--font-headings); }
+          .text-2xl { font-size: var(--text-2xl); line-height: var(--tw-leading, var(--text-2xl--line-height)); }
+          .text-3xl { font-size: var(--text-3xl); line-height: var(--tw-leading, var(--text-3xl--line-height)); }
+          .text-base { font-size: var(--text-base); line-height: var(--tw-leading, var(--text-base--line-height)); }
+          .text-lg { font-size: var(--text-lg); line-height: var(--tw-leading, var(--text-lg--line-height)); }
+          .text-sm { font-size: var(--text-sm); line-height: var(--tw-leading, var(--text-sm--line-height)); }
+          .text-xl { font-size: var(--text-xl); line-height: var(--tw-leading, var(--text-xl--line-height)); }
+          .text-xs { font-size: var(--text-xs); line-height: var(--tw-leading, var(--text-xs--line-height)); }
+          .leading-relaxed { --tw-leading: var(--leading-relaxed); line-height: var(--leading-relaxed); }
+          .leading-tight { --tw-leading: var(--leading-tight); line-height: var(--leading-tight); }
+          .font-bold { --tw-font-weight: var(--font-weight-bold); font-weight: var(--font-weight-bold); }
+          .font-medium { --tw-font-weight: var(--font-weight-medium); font-weight: var(--font-weight-medium); }
+          .font-normal { --tw-font-weight: var(--font-weight-normal); font-weight: var(--font-weight-normal); }
+          .font-semibold { --tw-font-weight: var(--font-weight-semibold); font-weight: var(--font-weight-semibold); }
+          .tracking-wide { --tw-tracking: var(--tracking-wide); letter-spacing: var(--tracking-wide); }
+          .whitespace-nowrap { white-space: nowrap; }
+          .text-background { color: var(--color-background); }
+          .text-danger { color: var(--color-danger); }
+          .text-danger-foreground { color: var(--color-danger-foreground); }
+          .text-foreground { color: var(--color-foreground); }
+          .text-muted-foreground { color: var(--color-muted-foreground); }
+          .text-primary { color: var(--color-primary); }
+          .text-primary-foreground { color: var(--color-primary-foreground); }
+          .text-secondary-foreground { color: var(--color-secondary-foreground); }
+          .text-sidebar-foreground { color: var(--color-sidebar-foreground); }
+          .text-success { color: var(--color-success); }
+          .text-success-foreground { color: var(--color-success-foreground); }
+          .text-warning { color: var(--color-warning); }
+          .text-warning-foreground { color: var(--color-warning-foreground); }
+          .uppercase { text-transform: uppercase; }
+          .opacity-60 { opacity: 60%; }
+          .opacity-70 { opacity: 70%; }
+          .opacity-80 { opacity: 80%; }
+          .shadow-sm { --tw-shadow: 0 1px 2px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.04)); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); }
+          .shadow-md { --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.08)), 0 2px 4px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.05)); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); }
+          .shadow-lg { --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.08)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.04)); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); }
+          .shadow-xs { --tw-shadow: 0 0 0 1px var(--tw-shadow-color, rgb(0 0 0 / 0.04)); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); }
+          .transition-all { transition: all 0.15s ease; }
+          .transition-shadow { transition: box-shadow 0.15s ease; }
+          .hover\:shadow-lg:hover { --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.08)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.04)); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); }
+          .hover\:shadow-md:hover { --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.08)), 0 2px 4px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.05)); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); }
+          .hover\:-translate-y-0\.5:hover { translate: 0 calc(var(--spacing) * -0.5); }
+          .hover\:border-primary\/20:hover { border-color: color-mix(in srgb, var(--color-primary) 20%, transparent); }
+          .group:hover .group-hover\:opacity-100 { opacity: 100%; }
+          .hidden { display: none; }
+        }
+        @property --tw-border-style { syntax: "*"; inherits: false; initial-value: solid; }
+        @property --tw-leading { syntax: "*"; inherits: false; }
+        @property --tw-font-weight { syntax: "*"; inherits: false; }
+        @property --tw-tracking { syntax: "*"; inherits: false; }
+        @property --tw-shadow { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+        @property --tw-shadow-color { syntax: "*"; inherits: false; }
+        @property --tw-shadow-alpha { syntax: "<percentage>"; inherits: false; initial-value: 100%; }
+        @property --tw-inset-shadow { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+        @property --tw-inset-shadow-color { syntax: "*"; inherits: false; }
+        @property --tw-inset-shadow-alpha { syntax: "<percentage>"; inherits: false; initial-value: 100%; }
+        @property --tw-ring-color { syntax: "*"; inherits: false; }
+        @property --tw-ring-shadow { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+        @property --tw-inset-ring-color { syntax: "*"; inherits: false; }
+        @property --tw-inset-ring-shadow { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+        @property --tw-ring-inset { syntax: "*"; inherits: false; }
+        @property --tw-ring-offset-width { syntax: "<length>"; inherits: false; initial-value: 0px; }
+        @property --tw-ring-offset-color { syntax: "*"; inherits: false; initial-value: #fff; }
+        @property --tw-ring-offset-shadow { syntax: "*"; inherits: false; initial-value: 0 0 #0000; }
+        @layer properties {
+          @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
+            *, ::before, ::after, ::backdrop {
+              --tw-border-style: solid;
+              --tw-leading: initial;
+              --tw-font-weight: initial;
+              --tw-tracking: initial;
+              --tw-shadow: 0 0 #0000;
+              --tw-shadow-color: initial;
+              --tw-shadow-alpha: 100%;
+              --tw-inset-shadow: 0 0 #0000;
+              --tw-inset-shadow-color: initial;
+              --tw-inset-shadow-alpha: 100%;
+              --tw-ring-color: initial;
+              --tw-ring-shadow: 0 0 #0000;
+              --tw-inset-ring-color: initial;
+              --tw-inset-ring-shadow: 0 0 #0000;
+              --tw-ring-inset: initial;
+              --tw-ring-offset-width: 0px;
+              --tw-ring-offset-color: #fff;
+              --tw-ring-offset-shadow: 0 0 #0000;
+            }
+          }
+        }
+
+        /* Custom premium styles */
+        .card-base {
+          background-color: var(--color-card);
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-border);
+          padding: 20px;
+        }
+        .card-base:hover {
+          border-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .metric-value {
+          font-size: 30px;
+          font-weight: 700;
+          font-family: var(--font-headings);
+          line-height: 1.2;
+          letter-spacing: -0.02em;
+        }
+        .section-heading {
+          font-size: 16px;
+          font-weight: 600;
+          font-family: var(--font-headings);
+          color: var(--color-foreground);
+        }
+        .card-label {
+          font-size: 13px;
+          color: var(--color-muted-foreground);
+          font-weight: 500;
+        }
+        .body-text {
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        .kpi-card {
+          background-color: var(--color-card);
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-border);
+          padding: 20px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          height: 116px;
+          transition: all 0.2s ease;
+        }
+        .kpi-card:hover {
+          border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+          box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+          translate: 0 -2px;
+        }
+        .kpi-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .health-bar {
+          width: 100%;
+          height: 8px;
+          background-color: var(--color-input);
+          border-radius: 99px;
+          overflow: hidden;
+        }
+        .health-bar-fill {
+          height: 100%;
+          border-radius: 99px;
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+          width: 78%;
+          transition: width 0.6s ease;
+        }
+        .insight-card {
+          background-color: var(--color-card);
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-border);
+          padding: 16px 20px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.2s ease;
+        }
+        .insight-card:hover {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          border-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+        }
+        .confidence-dots {
+          display: flex;
+          gap: 3px;
+        }
+        .confidence-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 2px;
+          background-color: var(--color-muted);
+        }
+        .confidence-dot.active {
+          background-color: var(--color-primary);
+        }
+
+        /* Skeleton loading */
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
+        .skeleton { display: block; }
+        .skeleton-bar { background: linear-gradient(90deg, var(--color-muted) 25%, var(--color-border) 50%, var(--color-muted) 75%); background-size: 200px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+        .timeline-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          margin-top: 4px;
+        }
+        .timeline-line {
+          width: 1px;
+          flex: 1;
+          background-color: var(--color-border);
+          margin-top: 4px;
+        }
+        .tooltip-trigger {
+          position: relative;
+          display: inline-flex;
+          cursor: help;
+        }
+        .tooltip-trigger .tooltip-text {
+          visibility: hidden;
+          opacity: 0;
+          position: absolute;
+          bottom: calc(100% + 8px);
+          left: 50%;
+          translate: -50% 0;
+          background-color: var(--color-foreground);
+          color: #fff;
+          font-size: 12px;
+          padding: 10px 14px;
+          border-radius: 8px;
+          width: 260px;
+          text-align: center;
+          line-height: 1.4;
+          pointer-events: none;
+          transition: all 0.15s ease;
+          z-index: 20;
+        }
+        .tooltip-trigger:hover .tooltip-text {
+          visibility: visible;
+          opacity: 1;
+        }
+        .tooltip-trigger .tooltip-text::after {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          translate: -50% 0;
+          border: 6px solid transparent;
+          border-top-color: var(--color-foreground);
+        }
+        .memory-chip {
+          background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
+          border-radius: var(--radius-lg);
+          border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+          padding: 20px;
+          transition: all 0.2s ease;
+        }
+        .memory-chip:hover {
+          box-shadow: 0 8px 24px rgba(91, 94, 244, 0.12);
+          translate: 0 -2px;
+        }
+        .memory-chip .confidence-ring {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: conic-gradient(var(--color-primary) 0deg 342deg, var(--color-input) 342deg 360deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .memory-chip .confidence-ring-inner {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background-color: var(--color-card);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--color-primary);
+        }
+        .frustration-ring {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 64px;
+          height: 64px;
+        }
+        .frustration-ring svg {
+          transform: rotate(-90deg);
+        }
+        .frustration-ring .ring-value {
+          position: absolute;
+          font-family: var(--font-headings);
+          font-weight: 700;
+          font-size: 16px;
+          color: #f59e0b;
+        }
+        .status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 2px 10px;
+          border-radius: 999px;
+        }
+        .tier-badge {
+          display: inline-flex;
+          align-items: center;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 10px;
+          border-radius: 6px;
+          background-color: var(--color-secondary);
+          color: var(--color-secondary-foreground);
+        }
+      </style>
+      <link rel="preload" as="image" href="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1" />
+      <link rel="preload" as="image" href="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0" />
+    </head>
+    <body>
+      <div class="flex font-body bg-background" style="min-height: 1100px" data-component="@screens/CustomerProfile.jsx">
+        <!-- Sidebar -->
+        <div class="w-16 bg-sidebar flex flex-col items-center py-4 gap-1" style="min-height: 100%" data-component="@components/Sidebar.jsx">
+          <div class="mb-6 w-8 h-8 bg-primary rounded-md flex items-center justify-center">
+            <span class="text-primary-foreground font-headings font-bold" style="font-size: 14px">M</span>
+          </div>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="layout-dashboard" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></g></svg></span>
+          </button>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground" data-media-type="banani-button">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="inbox" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11"></path></g></svg></span>
+          </button>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="users" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></g></svg></span>
+          </button>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="brain" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></g></svg></span>
+          </button>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="bar-chart-2" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="M5 21v-6m7 6V3m7 18V9"></path></svg></span>
+          </button>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="settings" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></g></svg></span>
+          </button>
+          <div class="mt-auto">
+            <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
+              <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="log-out" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="m16 17l5-5l-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex flex-col flex-1 min-w-0">
+          <!-- Top Bar -->
+          <div class="h-14 bg-card border-b border-border flex items-center px-6 gap-4" data-component="@components/TopBar.jsx">
+            <span class="font-headings font-semibold text-lg text-foreground flex-shrink-0"><span data-file="/screens/CustomerProfile.jsx" data-idx="0">Customer Profile</span></span>
+            <div class="flex-1 max-w-sm ml-4">
+              <div class="bg-input rounded-md px-3 py-2 flex items-center gap-2 text-muted-foreground text-sm">
+                <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 14px; height: 14px;" data-icon="search" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="14px" height="14px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.4285714285714284"><path d="m21 21l-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></g></svg></span>
+                <span><span data-file="/components/TopBar.jsx" data-idx="0">Search tickets, customers…</span></span>
+              </div>
+            </div>
+            <div class="ml-auto flex items-center gap-3">
+              <button class="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground relative" data-media-type="banani-button">
+                <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px;" data-icon="bell" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10.268 21a2 2 0 0 0 3.464 0m-10.47-5.674A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg></span>
+                <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
+              </button>
+              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0" class="w-8 h-8 rounded-full" data-component="@globalComponents/UserAvatar.jsx" />
+            </div>
+          </div>
+
+          <!-- Dashboard Content -->
+          <div class="flex-1 p-6 flex flex-col gap-6" style="max-width: 1360px">
+            <!-- Skeleton overlay (shown during loading) -->
+            <div class="skeleton">
+              <div class="card-base flex items-center gap-5" style="padding: 20px 24px">
+                <div class="skeleton-bar" style="width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;"></div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-1">
+                    <div class="skeleton-bar" style="width: 200px; height: 24px;"></div>
+                    <div class="skeleton-bar" style="width: 40px; height: 20px; border-radius: 6px;"></div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="skeleton-bar" style="width: 140px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 8px; height: 8px; border-radius: 50%;"></div>
+                    <div class="skeleton-bar" style="width: 120px; height: 14px;"></div>
+                    <div class="skeleton-bar" style="width: 8px; height: 8px; border-radius: 50%;"></div>
+                    <div class="skeleton-bar" style="width: 100px; height: 14px;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-bar" style="width: 64px; height: 64px; border-radius: 50%;"></div>
+              </div>
+              <div class="flex gap-6">
+                <div class="flex-1 flex flex-col gap-5" style="max-width: 58%">
+              <div class="grid grid-cols-3 gap-4">
+                <div class="skeleton-bar" style="height: 116px; border-radius: var(--radius-lg);"></div>
+                <div class="skeleton-bar" style="height: 116px; border-radius: var(--radius-lg);"></div>
+                <div class="skeleton-bar" style="height: 116px; border-radius: var(--radius-lg);"></div>
+              </div>
+              <div class="skeleton-bar" style="height: 140px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 340px; border-radius: var(--radius-lg);"></div>
+            </div>
+            <div class="flex flex-col gap-5" style="width: 42%">
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+              <div class="skeleton-bar" style="height: 160px; border-radius: var(--radius-lg);"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic content (hidden during loading) -->
+            <div class="skeleton-target hidden">
+            <!-- Customer Header -->
+            <div class="card-base flex items-center gap-5" style="padding: 20px 24px">
+              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1" class="w-14 h-14 rounded-full flex-shrink-0" data-component="@globalComponents/UserAvatar.jsx" />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-3 mb-1">
+                  <h1 id="customer-name" class="font-headings font-bold text-2xl text-foreground">Mrinmoy Chakraborty</h1>
+                </div>
+                <div class="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                  <span id="customer-email">mrinmoy@acme.io</span>
+                  <span class="w-1 h-1 rounded-full bg-border"></span>
+                  <span id="customer-tenure">Customer for 2 years</span>
+                  <span class="w-1 h-1 rounded-full bg-border"></span>
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                    Last active: 2h ago
+                  </span>
+                </div>
+              </div>
+              <!-- Frustration Ring -->
+              <div class="frustration-ring" data-component="@components/FrustrationRing.jsx">
+                <svg width="64" height="64">
+                  <circle cx="32" cy="32" r="27" fill="none" stroke="#e2e5ea" stroke-width="5"></circle>
+                  <circle cx="32" cy="32" r="27" fill="none" stroke="#f59e0b" stroke-width="5" stroke-dasharray="105.18052204218627 64.46548125166255" stroke-linecap="round"></circle>
+                </svg>
+                <span id="frustration-ring-value" class="ring-value">62</span>
+              </div>
+            </div>
+
+            <!-- Two-Column Layout -->
+            <div class="flex gap-6">
+              <!-- Left Column -->
+              <div class="flex-1 flex flex-col gap-5" style="min-width: 0; max-width: 58%">
+                <!-- KPI Cards: 3-card layout -->
+                <div class="grid grid-cols-3 gap-4">
+                  <!-- Total Tickets -->
+                  <div class="kpi-card">
+                    <div class="kpi-icon" style="background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%); color: var(--color-primary);">
+                      <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;" data-icon="ticket"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Zm11-4v2m0 10v2m0-8v2"></path></svg></span>
+                    </div>
+                    <div>
+                      <div id="kpi-tickets" class="metric-value text-foreground">14</div>
+                      <span class="card-label">Total Tickets</span>
+                    </div>
+                  </div>
+
+                  <!-- Resolved Rate -->
+                  <div class="kpi-card">
+                    <div class="kpi-icon" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: var(--color-success);">
+                      <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;" data-icon="check-circle"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M21.801 10A10 10 0 1 1 17 3.335"></path><path d="m9 11l3 3L22 4"></path></g></svg></span>
+                    </div>
+                    <div>
+                      <div id="kpi-resolved-rate" class="metric-value text-success">78%</div>
+                      <span class="card-label">Resolved Rate</span>
+                    </div>
+                  </div>
+
+                  <!-- Frustration Score -->
+                  <div class="kpi-card">
+                    <div class="kpi-icon" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: var(--color-warning);">
+                      <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 20px;" data-icon="flame"><svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0a5 5 0 0 1 1-3a1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"></path></svg></span>
+                    </div>
+                    <div>
+                      <div id="kpi-frustration" class="metric-value text-warning">62</div>
+                      <span class="card-label">Frustration Score</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Customer Health Score Card -->
+                <div class="card-base transition-shadow hover:shadow-md" style="padding: 20px 24px">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <span class="section-heading">Customer Health Score</span>
+                      <div class="tooltip-trigger">
+                        <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px; color: var(--color-muted-foreground);" data-icon="info"><svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></g></svg></span>
+                        <div class="tooltip-text">Health score combines support history, resolution success, recent activity, and frustration trends.</div>
+                      </div>
+                    </div>
+                    <span id="health-badge" class="status-badge bg-success/10 text-success">
+                      <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                      Healthy
+                    </span>
+                  </div>
+                  <div class="flex items-baseline gap-1 mb-3">
+                    <span id="health-score-value" class="metric-value text-foreground">78</span>
+                    <span class="text-lg text-muted-foreground font-medium">/ 100</span>
+                  </div>
+                  <div class="health-bar">
+                    <div id="health-score-fill" class="health-bar-fill"></div>
+                  </div>
+                </div>
+
+                <!-- Issue Timeline -->
+                <div class="card-base transition-shadow hover:shadow-md">
+                  <h2 class="section-heading mb-4"><span data-file="/screens/CustomerProfile.jsx" data-idx="3">Issue Timeline</span></h2>
+                  <div id="timeline-container" class="flex flex-col gap-0" data-component="@components/IssueTimeline.jsx">
+                    <!-- Timeline item 1 -->
+                    <div class="flex gap-4">
+                      <div class="flex flex-col items-center">
+                        <div class="timeline-dot bg-danger"></div>
+                        <div class="timeline-line" style="min-height: 32px"></div>
+                      </div>
+                      <div class="pb-5 flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <span class="text-xs bg-input text-muted-foreground px-2 py-0.5 rounded-sm">Nov 18, 2024</span>
+                          <span class="text-xs px-2 py-0.5 rounded-sm bg-danger text-danger-foreground">unresolved</span>
+                        </div>
+                        <p class="body-text text-foreground font-medium">API timeout errors on v2.3.1 endpoint</p>
+                      </div>
+                    </div>
+                    <!-- Timeline item 2 -->
+                    <div class="flex gap-4">
+                      <div class="flex flex-col items-center">
+                        <div class="timeline-dot bg-success"></div>
+                        <div class="timeline-line" style="min-height: 32px"></div>
+                      </div>
+                      <div class="pb-5 flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <span class="text-xs bg-input text-muted-foreground px-2 py-0.5 rounded-sm">Nov 12, 2024</span>
+                          <span class="text-xs px-2 py-0.5 rounded-sm bg-success text-success-foreground">resolved</span>
+                        </div>
+                        <p class="body-text text-foreground font-medium">API timeout on v2.2.0 endpoint</p>
+                        <div class="flex items-center gap-1.5 mt-1">
+                          <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span>
+                          <span class="text-xs text-success">Switched to eu-west-1 endpoint</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Timeline item 3 -->
+                    <div class="flex gap-4">
+                      <div class="flex flex-col items-center">
+                        <div class="timeline-dot bg-success"></div>
+                        <div class="timeline-line" style="min-height: 32px"></div>
+                      </div>
+                      <div class="pb-5 flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <span class="text-xs bg-input text-muted-foreground px-2 py-0.5 rounded-sm">Oct 3, 2024</span>
+                          <span class="text-xs px-2 py-0.5 rounded-sm bg-success text-success-foreground">resolved</span>
+                        </div>
+                        <p class="body-text text-foreground font-medium">Webhook delivery delay exceeding 30s</p>
+                        <div class="flex items-center gap-1.5 mt-1">
+                          <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span>
+                          <span class="text-xs text-success">Increased retry window server-side</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Timeline item 4 -->
+                    <div class="flex gap-4">
+                      <div class="flex flex-col items-center">
+                        <div class="timeline-dot bg-success"></div>
+                        <div class="timeline-line" style="min-height: 32px"></div>
+                      </div>
+                      <div class="pb-5 flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <span class="text-xs bg-input text-muted-foreground px-2 py-0.5 rounded-sm">Sep 18, 2024</span>
+                          <span class="text-xs px-2 py-0.5 rounded-sm bg-success text-success-foreground">resolved</span>
+                        </div>
+                        <p class="body-text text-foreground font-medium">Auth loop after deployment</p>
+                        <div class="flex items-center gap-1.5 mt-1">
+                          <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span>
+                          <span class="text-xs text-success">Token refresh timeout set to 60s</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Timeline item 5 -->
+                    <div class="flex gap-4">
+                      <div class="flex flex-col items-center">
+                        <div class="timeline-dot bg-success"></div>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <span class="text-xs bg-input text-muted-foreground px-2 py-0.5 rounded-sm">Aug 27, 2024</span>
+                          <span class="text-xs px-2 py-0.5 rounded-sm bg-success text-success-foreground">resolved</span>
+                        </div>
+                        <p class="body-text text-foreground font-medium">Data export returned empty CSV</p>
+                        <div class="flex items-center gap-1.5 mt-1">
+                          <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span>
+                          <span class="text-xs text-success">Fixed encoding issue in v2.1.5 patch</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column -->
+              <div class="flex flex-col gap-5" style="min-width: 0; width: 42%">
+                <!-- Memory Graph - Simplified to Technical Context -->
+                <div class="card-base transition-shadow hover:shadow-md" data-component="@components/MemoryGraph.jsx">
+                  <h2 class="section-heading mb-4">Memory Graph</h2>
+                  <div id="memory-graph-container" class="memory-chip">
+                    <div class="flex items-center justify-between mb-3">
+                      <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technical Context</span>
+                      <div class="confidence-dots">
+                        <div class="confidence-dot active"></div>
+                        <div class="confidence-dot active"></div>
+                        <div class="confidence-dot active"></div>
+                        <div class="confidence-dot active"></div>
+                        <div class="confidence-dot active"></div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                      <div class="confidence-ring">
+                        <div class="confidence-ring-inner">95%</div>
+                      </div>
+                      <div>
+                        <span class="text-base font-semibold text-foreground">v2.3.1 API</span>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                          <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                          <span class="text-xs text-muted-foreground">95% confidence</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Behavior - Single Insight Card -->
+                <div class="card-base transition-shadow hover:shadow-md" data-component="@components/Behavior.jsx">
+                  <h2 class="section-heading mb-3">Behavior</h2>
+                  <div id="behavior-container" class="insight-card" style="background: linear-gradient(135deg, #f0f2f5 0%, #f5f6f8 100%);">
+                    <span class="flex-shrink-0" style="font-size: 20px; line-height: 1;">⚡</span>
+                    <div class="flex-1 min-w-0">
+                      <span class="body-text font-medium text-foreground block">High-Frequency API Calls</span>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <div class="confidence-dots">
+                          <div class="confidence-dot active"></div>
+                          <div class="confidence-dot active"></div>
+                          <div class="confidence-dot active"></div>
+                          <div class="confidence-dot active"></div>
+                          <div class="confidence-dot"></div>
+                        </div>
+                        <span class="text-xs text-muted-foreground">80% confidence</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Preferences - Single Insight Card -->
+                <div class="card-base transition-shadow hover:shadow-md" data-component="@components/Preferences.jsx">
+                  <h2 class="section-heading mb-3">Preferences</h2>
+                  <div id="preferences-container" class="insight-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                    <span class="flex-shrink-0" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: var(--color-success); color: white; font-size: 12px; font-weight: 700;">✓</span>
+                    <span class="body-text font-medium text-foreground">No Escalation Calls</span>
+                  </div>
+                </div>
+
+                <!-- Known Frustrations - Warning Styled -->
+                <div class="card-base transition-shadow hover:shadow-md" style="border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);" data-component="@components/KnownFrustrations.jsx">
+                  <h2 class="section-heading mb-3">Known Frustrations</h2>
+                  <div id="frustrations-container" class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
+                    <span class="flex-shrink-0" style="font-size: 18px; line-height: 1;">⚠</span>
+                    <div class="flex-1 min-w-0">
+                      <span class="body-text font-medium text-foreground block">Repeated Timeout Issues</span>
+                      <span class="text-xs text-warning font-medium">High priority · 3 occurrences</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>
+      <script src="customer_profile.js"></script>
+      <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+</div>
