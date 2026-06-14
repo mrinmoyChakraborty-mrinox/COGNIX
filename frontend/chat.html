@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Chat · COGNIX</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/frontend/css/liveagent.css" />
+    <link rel="stylesheet" href="/frontend/css/chat.css" />
+  </head>
+  <body>
+    <!-- Error screen (shown when customer profile not found) -->
+    <div id="errorScreen" class="error-screen hidden">
+      <h2>Account not found</h2>
+      <p>Your account isn't set up yet. Contact support.</p>
+    </div>
+
+    <!-- Main chat layout -->
+    <div id="chatLayout" class="chat-layout hidden">
+      <!-- Sidebar -->
+      <aside class="chat-sidebar">
+        <div class="sidebar-header">
+          <img id="avatarImg" class="sidebar-avatar" alt="Avatar" />
+          <div class="sidebar-greeting">
+            <div class="greeting-label">Hi,</div>
+            <div class="greeting-name" id="greetingName">Customer</div>
+          </div>
+          <span class="plan-badge" id="planBadge">Free</span>
+        </div>
+
+        <div class="ticket-list-section">
+          <div class="ticket-list-header">
+            <span>My Tickets</span>
+            <button class="new-ticket-btn" id="newTicketBtn">+ New</button>
+          </div>
+          <div id="ticketList"></div>
+        </div>
+
+        <div class="sidebar-footer">
+          <button class="logout-link" id="logoutBtn">Log out</button>
+        </div>
+      </aside>
+
+      <!-- Main chat area -->
+      <div class="chat-main">
+        <div class="chat-header">
+          <div class="chat-header-subject" id="chatHeaderSubject">General Support</div>
+          <div class="chat-header-meta" id="chatHeaderMeta"></div>
+        </div>
+
+        <div id="errorBanner" class="error-banner hidden"></div>
+
+        <div class="chat-messages" id="chatMessages">
+          <div class="welcome-banner" id="welcomeBanner">
+            <h2>Welcome to COGNIX Support</h2>
+            <p>Select a ticket or type a message to get started.</p>
+          </div>
+        </div>
+
+        <div class="reply-bar">
+          <div
+            class="reply-input"
+            id="replyInput"
+            contenteditable="true"
+            data-placeholder="Type your message…"
+          ></div>
+          <button class="send-btn" id="sendBtn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Ticket Modal -->
+    <div class="modal-overlay hidden" id="ticketModal">
+      <div class="modal-card">
+        <div class="modal-title">Create Ticket</div>
+        <div class="modal-subtitle">Describe what you need help with.</div>
+        <div class="modal-field">
+          <label for="ticketSubject">Subject</label>
+          <input type="text" id="ticketSubject" placeholder="e.g. API timeout issue" />
+          <div class="field-error hidden" id="ticketSubjectError">Please enter a subject</div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+          <button class="btn btn-primary" id="modalSubmitBtn">Create Ticket</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/frontend/js/chat.js"></script>
+  </body>
+</html>

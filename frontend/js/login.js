@@ -1,3 +1,4 @@
+const ADMIN_EMAIL = "your-admin@email.com";
 
 const SUPABASE_URL =
 "https://ckjypqgnkovsdezsjjqo.supabase.co";
@@ -10,7 +11,6 @@ window.supabase.createClient(
 SUPABASE_URL,
 SUPABASE_ANON_KEY
 );
-
 
 const toggleBtn =
 document.getElementById("toggleBtn");
@@ -35,9 +35,13 @@ document.querySelector(".primary-btn");
 
 let isLogin = true;
 
-
-// TOGGLE LOGIN / SIGNUP
-
+function roleRedirect(email) {
+  if (email === ADMIN_EMAIL) {
+    window.location.href = "/frontend/dashboard.html";
+  } else {
+    window.location.href = "/frontend/chat.html";
+  }
+}
 
 toggleBtn.addEventListener(
 "click",
@@ -93,9 +97,6 @@ confirmPasswordField.classList.remove("hidden");
 
 });
 
-// EMAIL SIGNUP
-
-
 async function signUp(
  email,
  password
@@ -106,9 +107,7 @@ async function signUp(
  .getElementById("fullName")
  .value;
 
- const {
- error
- }
+ const { data, error }
  =
  await supabaseClient.auth.signUp({
 
@@ -129,15 +128,18 @@ return;
 
 }
 
+if (data?.user) {
+  await supabaseClient.from('user_roles').insert({
+    user_id: data.user.id,
+    role: 'customer'
+  });
+}
+
 alert(
 "Account created! Please verify your email."
 );
 
 }
-
-
-// EMAIL LOGIN
-
 
 async function signIn(email,password){
 
@@ -156,9 +158,7 @@ async function signIn(email,password){
  }
 
  alert("Login Success");
-
- window.location.href =
- "dashboard.html";
+ roleRedirect(email);
 }
 
 // =========================
@@ -224,7 +224,6 @@ password
 
 // GOOGLE LOGIN
 
-
 document
 .querySelector(".google-btn")
 .addEventListener(
@@ -243,7 +242,7 @@ options:{
 
 redirectTo:
 window.location.origin +
-"/dashboard.html"
+"/frontend/login.html"
 
 }
 
@@ -258,9 +257,13 @@ alert(error.message);
 }
 );
 
-
-// CHECK SESSION
-
+// Handle OAuth callback — detect session after redirect
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    const email = session.user.email;
+    if (email) roleRedirect(email);
+  }
+});
 
 async function checkSession(){
 
@@ -270,14 +273,11 @@ data:{session}
 =
 await supabaseClient.auth.getSession();
 
-if(session){
-
-window.location.href =
-"/dashboard.html";
-
+if(session?.user){
+  const email = session.user.email;
+  if (email) roleRedirect(email);
 }
 
 }
 
 checkSession();
-
