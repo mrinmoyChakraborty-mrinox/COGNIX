@@ -5,7 +5,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 (async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || session.user.email !== ADMIN_EMAIL) {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
     return;
   }
   showSkeleton(true);

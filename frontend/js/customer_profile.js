@@ -8,7 +8,7 @@ const CUSTOMER_ID = params.get('customer_id');
 (async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || session.user.email !== ADMIN_EMAIL) {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
     return;
   }
   if (!CUSTOMER_ID) {

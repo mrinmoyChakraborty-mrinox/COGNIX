@@ -52,9 +52,9 @@ function setLoading(loading) {
 
 function roleRedirect(email) {
   if (email === ADMIN_EMAIL) {
-    window.location.href = "/frontend/dashboard.html";
+    window.location.href = "./dashboard.html";
   } else {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
   }
 }
 
@@ -200,7 +200,7 @@ document.querySelector(".google-btn").addEventListener("click", async () => {
   try {
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin + "/frontend/login.html" },
+      options: { redirectTo: window.location.origin + "/login.html" },
     });
     if (error) showFormError(error.message);
   } catch (e) {

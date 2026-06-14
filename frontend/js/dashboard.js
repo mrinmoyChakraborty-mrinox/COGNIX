@@ -47,7 +47,7 @@ async function apiFetch(path) {
   const res = await fetch(`${API_BASE}${path}`, { headers });
   if (res.status === 401) {
     await supabaseClient.auth.signOut();
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return null;
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -123,7 +123,7 @@ function renderQueue(customers, ticketsByCust) {
   list.querySelectorAll(".start-session-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cid = btn.dataset.customerId;
-      window.location.href = `/frontend/liveagent.html?customer_id=${cid}`;
+      window.location.href = `./liveagent.html?customer_id=${cid}`;
     });
   });
 
@@ -287,12 +287,12 @@ async function loadTrending() {
 async function loadUser() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return;
   }
 
   if (session.user.email !== ADMIN_EMAIL) {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
     return;
   }
 
@@ -317,7 +317,7 @@ async function loadUser() {
 
 async function logout() {
   await supabaseClient.auth.signOut();
-  window.location.href = "/frontend/login.html";
+  window.location.href = "./login.html";
 }
 
 // ── Init ───────────────────────────────────────────────────

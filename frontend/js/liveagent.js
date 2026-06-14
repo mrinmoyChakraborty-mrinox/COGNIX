@@ -21,11 +21,11 @@ async function getToken() {
 async function loadAgent() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return;
   }
   if (session.user.email !== ADMIN_EMAIL) {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
     return;
   }
   const user = session.user;

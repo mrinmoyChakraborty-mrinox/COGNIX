@@ -63,11 +63,11 @@ async function loadTickets() {
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return;
   }
   if (session.user.email === ADMIN_EMAIL) {
-    window.location.href = "/frontend/dashboard.html";
+    window.location.href = "./dashboard.html";
     return;
   }
 
@@ -385,7 +385,7 @@ $("ticketSubject")?.addEventListener("keydown", (e) => {
 
 $("logoutBtn")?.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
-  window.location.href = "/frontend/login.html";
+  window.location.href = "./login.html";
 });
 
 $("closeBanner")?.addEventListener("click", () => {
