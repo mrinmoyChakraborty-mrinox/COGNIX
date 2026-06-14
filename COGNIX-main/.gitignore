@@ -1,0 +1,17 @@
+.env
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+*.pyc
+*.pyo
+.venv/
+venv/
+node_modules/
+dist/
+.vscode/
+.idea/
+*.egg-info/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
