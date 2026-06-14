@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Agent Session · MemoryDesk</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/liveagent.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ============ SIDEBAR ============ -->
+      <aside class="sidebar">
+        <div class="logo">M</div>
+
+        <nav class="sidebar-nav">
+          <button class="nav-icon" title="Dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+          </button>
+          <button class="nav-icon active" title="Inbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11"></path></svg>
+          </button>
+          <button class="nav-icon" title="Customers">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          </button>
+          <button class="nav-icon" title="MemoryDesk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
+          </button>
+          <button class="nav-icon" title="Analytics">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21v-6m7 6V3m7 18V9"></path></svg>
+          </button>
+          <button class="nav-icon" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </nav>
+
+        <button class="nav-icon logout" title="Log out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17l5-5l-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>
+        </button>
+      </aside>
+
+      <!-- ============ MAIN ============ -->
+      <div class="main">
+        <!-- Top bar -->
+        <header class="topbar">
+          <span class="topbar-title">Session with Mrinmoy</span>
+
+          <div class="topbar-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21l-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+            <span>Search tickets, customers…</span>
+          </div>
+
+          <div class="topbar-actions">
+            <button class="icon-btn" title="Notifications">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0m-10.47-5.674A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+              <span class="notif-dot"></span>
+            </button>
+            <!-- <img
+              src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0"
+              class="avatar avatar-sm"
+              alt="Agent avatar"
+            /> -->
+           <img
+            id="agentAvatar"
+            class="avatar avatar-sm"
+            alt="Agent avatar"
+          />
+          </div>
+        </header>
+
+        <!-- Content: chat + memory panel -->
+        <div class="content">
+          <!-- ============ CHAT ============ -->
+          <section class="chat">
+            <div class="chat-messages">
+              <div class="msg msg-left">
+                <img
+                  src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1"
+                  class="avatar avatar-sm"
+                  alt="Mrinmoy"
+                />
+                <div class="msg-body">
+                  <div class="bubble bubble-incoming">
+                    Hey, I'm getting the same API timeout issue again. It's been happening every few hours now.
+                  </div>
+                  <span class="msg-time">10:24 AM</span>
+                </div>
+              </div>
+
+              <div class="msg msg-right">
+                <div class="msg-body">
+                  <div class="bubble bubble-outgoing">
+                    Hi Mrinmoy — I can see this is the third time you've hit this. Last time, switching to the eu-west-1 endpoint helped. Are you still on us-east-1?
+                    <span class="ai-tag">· AI assisted</span>
+                  </div>
+                  <span class="msg-time">10:25 AM</span>
+                </div>
+              </div>
+
+              <div class="msg msg-left">
+                <img
+                  src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1"
+                  class="avatar avatar-sm"
+                  alt="Mrinmoy"
+                />
+                <div class="msg-body">
+                  <div class="bubble bubble-incoming">
+                    Yeah still on us-east-1. We're on v2.3.1 now though, not 2.2.
+                  </div>
+                  <span class="msg-time">10:25 AM</span>
+                </div>
+              </div>
+
+              <!-- typing indicator -->
+              <!-- <div class="msg msg-right">
+                <div class="typing">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            </div> -->
+
+            <div class="msg msg-right">
+              <div class="msg-body">
+                <div class="bubble bubble-outgoing">
+                  Based on your history, this appears to be the same timeout pattern seen in previous sessions. I recommend switching to the eu-west-1 endpoint and increasing the request timeout to 90 seconds.
+                  <span class="ai-tag">· AI assisted</span>
+                </div>
+                <span class="msg-time">10:26 AM</span>
+              </div>
+            </div>
+
+      </div>
+            <!-- Reply bar -->
+            <div class="reply-bar">
+              <div class="reply-input" contenteditable="true" data-placeholder="Type a reply…"></div>
+              <button class="ai-suggest-btn" id="aiSuggestBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594zM20 2v4m2-2h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>
+                AI suggest reply
+              </button>
+            </div>
+          </section>
+
+          <!-- ============ MEMORY PANEL ============ -->
+          <aside class="memory-panel">
+            <!-- Profile -->
+            <div class="profile">
+              <img
+                src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1"
+                class="avatar avatar-lg"
+                alt="Mrinmoy Chakraborty"
+              />
+              <div class="profile-info">
+                <div class="profile-name">Mrinmoy Chakraborty</div>
+                <div class="profile-meta">mrinmoy@acme.io · Pro plan</div>
+              </div>
+              <div class="frustration-ring">
+                <svg width="56" height="56" style="transform: rotate(-90deg)">
+                  <circle cx="28" cy="28" r="23" fill="none" stroke="#e2e5ea" stroke-width="5"></circle>
+                  <circle cx="28" cy="28" r="23" fill="none" stroke="#ef4444" stroke-width="5"
+                    stroke-dasharray="112.72034441080177 31.792917654328704" stroke-linecap="round"></circle>
+                </svg>
+                <span class="frustration-value">78</span>
+              </div>
+            </div>
+
+            <!-- Environment -->
+            <div class="panel-section">
+              <div class="section-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><path d="M8 21h8m-4-4v4"></path></svg>
+                <span>Environment</span>
+              </div>
+              <div class="kv-list">
+                <div class="kv-row"><span class="kv-label">OS</span><span class="kv-value">macOS 14.5</span></div>
+                <div class="kv-row"><span class="kv-label">Browser</span><span class="kv-value">Chrome 124</span></div>
+                <div class="kv-row"><span class="kv-label">Plan</span><span class="kv-value">Pro</span></div>
+                <div class="kv-row"><span class="kv-label">SDK</span><span class="kv-value">v2.3.1</span></div>
+              </div>
+            </div>
+
+            <!-- Past Issues -->
+            <div class="panel-section">
+              <div class="section-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                <span>Past issues</span>
+              </div>
+              <div class="issue-list">
+                <div class="issue-row">
+                  <span class="issue-date">Nov 12</span>
+                  <span class="issue-title">API timeout on v2.2.0</span>
+                  <span class="status-pill status-resolved">resolved</span>
+                </div>
+                <div class="issue-row">
+                  <span class="issue-date">Oct 3</span>
+                  <span class="issue-title">Webhook delay &gt; 30s</span>
+                  <span class="status-pill status-resolved">resolved</span>
+                </div>
+                <div class="issue-row">
+                  <span class="issue-date">Sep 18</span>
+                  <span class="issue-title">Auth loop after deploy</span>
+                  <span class="status-pill status-resolved">resolved</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- What Worked -->
+            <div class="panel-section">
+              <div class="section-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"></path><path d="m9 11l3 3L22 4"></path></svg>
+                <span>What worked</span>
+              </div>
+              <ul class="bullet-list">
+                <li><span class="bullet bullet-success">·</span>Increasing request timeout to 60s</li>
+                <li><span class="bullet bullet-success">·</span>Switching to regional endpoint eu-west-1</li>
+                <li><span class="bullet bullet-success">·</span>Disabling retry on 503 errors</li>
+              </ul>
+            </div>
+
+            <!-- Current Session Notes -->
+            <div class="panel-section">
+              <div class="section-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"></path></svg>
+                <span>Current session notes</span>
+              </div>
+              <ul class="bullet-list">
+                <li><span class="bullet bullet-primary">·</span>Prefers async support — do not escalate to call</li>
+                <li><span class="bullet bullet-primary">·</span>Now on SDK v2.3.1, upgraded this week</li>
+                <li><span class="bullet bullet-primary">·</span>Issue reproducible on both staging and prod</li>
+              </ul>
+            </div>
+
+            <!-- Memory Delta (highlighted) -->
+            <div class="panel-section memory-delta-section">
+              <div class="memory-delta-card">
+                <div class="memory-delta-header">
+                  <div class="memory-delta-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
+                  </div>
+                  <div class="memory-delta-heading">
+                    <span class="memory-delta-title">Memory delta</span>
+                    <span class="memory-delta-subtitle">New memories from this session</span>
+                  </div>
+                  <span class="live-badge"><span class="live-dot"></span>live</span>
+                </div>
+
+                <div class="memory-delta-body">
+                  <div class="memory-item" data-kind="new">
+                    <span class="memory-item-icon plus">+</span>
+                    <div class="memory-item-text">
+                      <span class="memory-item-title">Prefers async support, avoid calls</span>
+                      <span class="memory-item-tag tag-preference">preference</span>
+                    </div>
+                  </div>
+                  <div class="memory-item" data-kind="new">
+                    <span class="memory-item-icon plus">+</span>
+                    <div class="memory-item-text">
+                      <span class="memory-item-title">Upgraded to SDK v2.3.1 this week</span>
+                      <span class="memory-item-tag tag-environment">environment</span>
+                    </div>
+                  </div>
+                  <div class="memory-item" data-kind="new">
+                    <span class="memory-item-icon plus">+</span>
+                    <div class="memory-item-text">
+                      <span class="memory-item-title">Recurring API timeout — 3rd occurrence in 30 days</span>
+                      <span class="memory-item-tag tag-issue">issue pattern</span>
+                    </div>
+                  </div>
+                  <div class="memory-item" data-kind="updated">
+                    <span class="memory-item-icon tilde">~</span>
+                    <div class="memory-item-text">
+                      <span class="memory-item-title">Reproducible on staging and prod (confirmed)</span>
+                      <span class="memory-item-tag tag-updated">updated</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="memory-delta-footer">
+                  <!-- <span class="memory-delta-count">4 memories queued</span> -->
+                   <span
+                    class="memory-delta-count"
+                    id="memoryCount"
+                  >
+                    Loading...
+                  </span>
+                  <button class="memory-delta-save" id="memorySaveBtn">Save to MemoryDesk</button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/liveagent.js"></script>
+
+  </body>
+</html>
