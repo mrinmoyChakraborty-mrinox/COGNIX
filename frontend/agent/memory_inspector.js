@@ -1,6 +1,13 @@
-const API_BASE = 'http://localhost:8000';
+const { ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE } = window.CONFIG;
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 (async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session || session.user.email !== ADMIN_EMAIL) {
+    window.location.href = "/frontend/chat.html";
+    return;
+  }
   showSkeleton(true);
   try {
     const customers = await fetchJSON('/customers');
@@ -147,11 +154,13 @@ function showEmpty(msg) {
   showSkeleton(false);
 }
 
-function fetchJSON(path) {
-  return fetch(`${API_BASE}${path}`).then(r => {
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText} for ${path}`);
-    return r.json();
-  });
+async function fetchJSON(path) {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const headers = { "Accept": "application/json" };
+  if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${path}`);
+  return res.json();
 }
 
 function timeAgo(date) {
