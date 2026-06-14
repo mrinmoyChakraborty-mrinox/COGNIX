@@ -60,7 +60,7 @@ async function connectWebSocket() {
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
-    console.log("WS connected | customer_id=", CUSTOMER_ID);
+    console.info("WS connected | customer_id=", CUSTOMER_ID);
   };
 
   socket.onmessage = (event) => {
@@ -111,12 +111,12 @@ function handleWsEvent(msg) {
 }
 
 function sendMessage() {
-  const text = replyInput.textContent.trim();
+  const text = replyInput.value.trim();
   if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
 
   appendMessage("user", text);
   socket.send(text);
-  replyInput.textContent = "";
+  replyInput.value = "";
   replyInput.focus();
 }
 
@@ -218,13 +218,8 @@ function wireAiSuggest() {
     aiSuggestBtn.classList.add("is-loading");
     aiSuggestBtn.disabled = true;
     setTimeout(() => {
-      replyInput.textContent = suggestion;
+      replyInput.value = suggestion;
       replyInput.focus();
-      const range = document.createRange();
-      range.selectNodeContents(replyInput);
-      range.collapse(false);
-      window.getSelection()?.removeAllRanges();
-      window.getSelection()?.addRange(range);
       aiSuggestBtn.classList.remove("is-loading");
       aiSuggestBtn.disabled = false;
     }, 400);
@@ -314,7 +309,9 @@ async function wireResolveButton() {
         btn.style.display = "none";
         appendMessage("assistant", "✅ Ticket marked as resolved.");
       }
-    } catch {}
+    } catch (e) {
+      console.warn("resolve ticket failed", e);
+    }
   });
 }
 

@@ -72,18 +72,21 @@
 
             <!-- FORM -->
 
+            <div id="formError" class="form-message form-error hidden" role="alert"></div>
+            <div id="formSuccess" class="form-message form-success hidden" role="status"></div>
+
             <form id="authForm">
 
                 <div id="nameField" class="hidden">
-
+                    <label for="fullName" class="sr-only">Full Name</label>
                     <input
                         id="fullName"
                         type="text"
                         placeholder="Full Name"
                     >
-
                 </div>
 
+                <label for="email" class="sr-only">Email Address</label>
                 <input
                     id="email"
                     type="email"
@@ -91,6 +94,7 @@
                     required
                 >
 
+                <label for="password" class="sr-only">Password</label>
                 <input
                     id="password"
                     type="password"
@@ -99,13 +103,12 @@
                 >
 
                 <div id="confirmPasswordField" class="hidden">
-
+                    <label for="confirmPassword" class="sr-only">Confirm Password</label>
                     <input
                         id="confirmPassword"
                         type="password"
                         placeholder="Confirm Password"
                     >
-
                 </div>
 
                 <button
@@ -179,7 +182,7 @@
 
 <!-- Supabase -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49"></script>
 
 <!-- Your JS -->
 

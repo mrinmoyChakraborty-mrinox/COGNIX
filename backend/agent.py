@@ -25,7 +25,8 @@ from models import Customer, MemoryEntry
 
 logger = logging.getLogger("cognix.agent")
 
-load_dotenv()
+load_dotenv("backend/.env")
+load_dotenv()  # fallback to root .env
 
 # ── Model init (lazy) ────────────────────────────────────────
 # Initialised on first call so mock mode works without the API key.

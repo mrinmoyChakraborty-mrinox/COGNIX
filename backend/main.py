@@ -52,7 +52,8 @@ from models import (
 
 # ── env ─────────────────────────────────────────────────────
 
-load_dotenv()
+load_dotenv("backend/.env")
+load_dotenv()  # fallback to root .env
 
 # ── logging ──────────────────────────────────────────────────
 
@@ -123,12 +124,12 @@ def _validate_env() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(
+    logger.info(
         "\n"
         "+----------------------------------------+\n"
         "|          COGNIX  v1.0.0                |\n"
         "| FastAPI | Hindsight | Groq | Supabase  |\n"
-        "+----------------------------------------+\n"
+        "+----------------------------------------+"
     )
     missing = _validate_env()
     if missing:
@@ -353,7 +354,7 @@ async def resolve_ticket_endpoint(ticket_id: str, _: dict = Depends(require_admi
 # ── Customer self-service endpoints ──────────────────────────
 
 
-async def _get_customer_by_email(email: str):
+async def _get_customer_by_email(email: str) -> Customer | None:
     """Look up customer row by email — mock-aware."""
     if USE_MOCK:
         customers = await list_customers()
@@ -364,11 +365,11 @@ async def _get_customer_by_email(email: str):
     client = get_supabase_client()
     rows = client.table("customers").select("*").eq("email", email).limit(1).execute()
     if rows.data and len(rows.data) > 0:
-        return rows.data[0]
+        return Customer(**rows.data[0])
     return None
 
 
-async def _get_tickets_by_customer(customer_id: str):
+async def _get_tickets_by_customer(customer_id: str) -> list[Ticket]:
     """Get tickets for a customer — mock-aware."""
     if USE_MOCK:
         return await get_tickets(customer_id)
@@ -380,41 +381,40 @@ async def _get_tickets_by_customer(customer_id: str):
         .order("created_at", desc=True)
         .execute()
     )
-    return rows.data if rows.data else []
+    return [Ticket(**r) for r in rows.data] if rows.data else []
 
 
-async def _create_ticket_for_customer(customer_id: str, subject: str):
+async def _create_ticket_for_customer(customer_id: str, subject: str) -> Ticket:
     """Create a ticket and increment ticket_count — mock-aware."""
     import uuid
 
     ticket_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     if USE_MOCK:
         from dev.mock_repository import TICKETS, CUSTOMERS
 
-        ticket = {
-            "id": ticket_id,
-            "customer_id": customer_id,
-            "subject": subject,
-            "status": "open",
-            "created_at": now,
-            "resolved_at": None,
-        }
-        TICKETS.setdefault(customer_id, []).insert(0, ticket)
+        ticket = Ticket(
+            id=ticket_id,
+            customer_id=customer_id,
+            subject=subject,
+            status="open",
+            created_at=now,
+        )
+        TICKETS.setdefault(customer_id, []).insert(0, ticket.model_dump())
         for c in CUSTOMERS:
             if c["id"] == customer_id:
                 c["ticket_count"] = c.get("ticket_count", 0) + 1
                 break
         return ticket
     client = get_supabase_client()
-    ticket = {
-        "id": ticket_id,
-        "customer_id": customer_id,
-        "subject": subject,
-        "status": "open",
-        "created_at": now,
-    }
-    client.table("tickets").insert(ticket).execute()
+    ticket = Ticket(
+        id=ticket_id,
+        customer_id=customer_id,
+        subject=subject,
+        status="open",
+        created_at=now,
+    )
+    client.table("tickets").insert(ticket.model_dump()).execute()
     client.rpc("increment_ticket_count", {"cust_id": customer_id}).execute()
     return ticket
 
@@ -437,9 +437,7 @@ async def my_tickets(user: dict = Depends(get_current_user)):
     customer = await _get_customer_by_email(email)
     if customer is None:
         raise HTTPException(status_code=404, detail="Customer profile not found")
-    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
-    tickets = await _get_tickets_by_customer(customer_id)
-    return tickets
+    return await _get_tickets_by_customer(customer.id)
 
 
 @app.post("/my/tickets")
@@ -450,9 +448,7 @@ async def create_my_ticket(
     customer = await _get_customer_by_email(email)
     if customer is None:
         raise HTTPException(status_code=404, detail="Customer profile not found")
-    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
-    ticket = await _create_ticket_for_customer(customer_id, req.subject)
-    return ticket
+    return await _create_ticket_for_customer(customer.id, req.subject)
 
 
 @app.post("/my/chat")
@@ -461,19 +457,17 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     customer = await _get_customer_by_email(email)
     if customer is None:
         raise HTTPException(status_code=404, detail="Customer profile not found")
-    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
-    customer_name = customer["name"] if isinstance(customer, dict) else customer.name
 
-    await ensure_bank(customer_id, customer_name)
-    memories, _ = await retrieve_memories(customer_id, req.message)
-    reflection = await reflect(customer_id, req.message)
+    await ensure_bank(customer.id, customer.name)
+    memories, _ = await retrieve_memories(customer.id, req.message)
+    reflection = await reflect(customer.id, req.message)
 
     response_text, suggested_solution = await generate_response(
-        {"id": customer_id, "name": customer_name}, memories, req.message, reflection
+        customer, memories, req.message, reflection
     )
 
     await save_memory(
-        customer_id,
+        customer.id,
         f'Customer: "{req.message[:120]}". Agent: "{response_text[:120]}".',
         "support session",
     )
@@ -710,4 +704,5 @@ if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    reload = os.getenv("UVICORN_RELOAD", "").lower() in ("true", "1", "yes")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)

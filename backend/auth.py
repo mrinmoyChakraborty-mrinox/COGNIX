@@ -26,21 +26,8 @@ def get_supabase_client():
     return _supabase
 
 
-def _get_client():
-    global _supabase
-    if _supabase is None:
-        from supabase import create_client
-
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set")
-        _supabase = create_client(url, key)
-    return _supabase
-
-
 def _verify_token(token: str) -> dict:
-    client = _get_client()
+    client = get_supabase_client()
     user = client.auth.get_user(token)
     user_id = user.user.id
     email = user.user.email or ""
@@ -51,7 +38,7 @@ def _verify_token(token: str) -> dict:
 
 def _get_user_role(user_id: str, client=None) -> str:
     if client is None:
-        client = _get_client()
+        client = get_supabase_client()
     try:
         rows = (
             client.table("user_roles")

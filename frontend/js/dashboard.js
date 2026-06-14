@@ -308,7 +308,11 @@ async function loadUser() {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}`;
 
   $("welcomeText").innerText = `Good morning, ${fullName}`;
-  $("avatarWrapper").innerHTML = `<img src="${avatar}" class="avatar" alt="${fullName}">`;
+  const img = document.createElement("img");
+  img.src = avatar;
+  img.className = "avatar";
+  img.alt = fullName;
+  $("avatarWrapper").appendChild(img);
 }
 
 async function logout() {
