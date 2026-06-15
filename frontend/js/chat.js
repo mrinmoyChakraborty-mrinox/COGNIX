@@ -398,6 +398,8 @@ function hideError() {
 let _agentConnected = false;
 let _pendingPollTimer = null;
 
+let _seenReplyIds = new Set();
+
 function startPendingPoll() {
   if (_pendingPollTimer) clearInterval(_pendingPollTimer);
   _pendingPollTimer = setInterval(async () => {
@@ -406,6 +408,8 @@ function startPendingPoll() {
       if (res.ok) {
         const data = await res.json();
         for (const reply of data.replies || []) {
+          const rid = reply.reply_id || "no_id";
+          console.log(`[DIAG] render source=poll reply_id=${rid} text=%.200s`, reply.text);
           appendMessage("assistant", reply.text);
         }
         _agentConnected = !data.agent_disconnected;
@@ -443,6 +447,8 @@ async function sendMessage() {
     showTypingIndicator(false);
 
     if (data.reply) {
+      const rid = data.reply_id || "no_id";
+      console.log(`[DIAG] render source=chat_response reply_id=${rid} text=%.200s`, data.reply);
       appendMessage("assistant", data.reply);
     }
 

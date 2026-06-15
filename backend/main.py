@@ -25,6 +25,7 @@ import logging
 import logging.config
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from dotenv import load_dotenv
 from fastapi import (
@@ -579,6 +580,9 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
         "support session",
     )
 
+    # Generate a unique reply ID for every reply delivered to the customer
+    reply_id = str(uuid4())
+
     agent_ws = sessions.get_agent_ws(customer.id)
     agent_connected = agent_ws is not None
 
@@ -627,15 +631,33 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
         pending = sessions.pop_pending_replies(customer.id)
         agent_reply = pending[-1]["text"] if pending else None
 
+        logger.info(
+            "my_chat | agent_connected=True | reply_id=%s | reply_source=%s | reply_text=%.200s | pending_count=%d | ai_text=%.200s",
+            reply_id,
+            "pending_reply" if agent_reply else "placeholder",
+            agent_reply or "An agent is reviewing your message.",
+            len(pending),
+            result.response,
+        )
+
         return MyChatResponse(
             reply=agent_reply or "An agent is reviewing your message.",
+            reply_id=reply_id,
             suggested_solution=result.suggested_solution,
             agent_connected=True,
         )
 
     # No agent connected — return AI reply directly
+    logger.info(
+        "my_chat | agent_connected=False | reply_id=%s | reply_source=ai_direct | reply_text=%.200s",
+        reply_id,
+        result.response,
+    )
+
     return MyChatResponse(
-        reply=result.response, suggested_solution=result.suggested_solution
+        reply=result.response,
+        reply_id=reply_id,
+        suggested_solution=result.suggested_solution,
     )
 
 
@@ -645,11 +667,13 @@ async def my_pending_replies(user: dict = Depends(get_current_user)):
     customer = await _resolve_customer(user)
     agent_connected = sessions.is_agent_connected(customer.id)
     replies = sessions.pop_pending_replies(customer.id)
-    logger.info(
-        "pending replies fetched | customer_id=%s | count=%d",
-        customer.id,
-        len(replies),
-    )
+    for r in replies:
+        logger.info(
+            "pending_replies | customer_id=%s | reply_id=%s | reply_text=%.200s | source=poll",
+            customer.id,
+            r.get("reply_id", "no_id"),
+            r.get("text", ""),
+        )
     if not agent_connected:
         logger.info(
             "pending replies removed | customer_id=%s | agent_disconnected=%s",
@@ -751,10 +775,17 @@ async def websocket_session(
             customer_id,
         )
         for reply in orphaned:
+            rid = reply.get("reply_id", "no_id")
+            logger.info(
+                "orphan_flush | reply_id=%s | reply_text=%.200s",
+                rid,
+                reply.get("text", ""),
+            )
             await websocket.send_json(
                 {
                     "event": "agent_reply_sent",
                     "data": reply["text"],
+                    "reply_id": rid,
                 }
             )
 
@@ -818,12 +849,19 @@ async def websocket_session(
                     "agent reply",
                 )
                 # Store pending reply so customer gets it on next /my/chat poll
+                reply_id = str(uuid4())
                 sessions.add_pending_reply(
                     customer_id,
                     {
+                        "reply_id": reply_id,
                         "text": message_text,
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
+                )
+                logger.info(
+                    "agent_reply stored as pending | reply_id=%s | reply_text=%.200s",
+                    reply_id,
+                    message_text,
                 )
                 logger.info(
                     "pending replies stored | customer_id=%s | count=%d",
@@ -834,6 +872,7 @@ async def websocket_session(
                     {
                         "event": "agent_reply_sent",
                         "data": message_text,
+                        "reply_id": reply_id,
                     }
                 )
                 continue
