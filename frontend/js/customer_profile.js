@@ -1,30 +1,52 @@
-const ADMIN_EMAIL = "your-admin@email.com";
-const API_BASE = 'http://localhost:8000';
-const SUPABASE_URL = "https://ckjypqgnkovsdezsjjqo.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
+const { ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE } = window.CONFIG;
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const params = new URLSearchParams(window.location.search);
 const CUSTOMER_ID = params.get('customer_id');
 
+// Replace the init() IIFE:
 (async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || session.user.email !== ADMIN_EMAIL) {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
     return;
   }
+
   if (!CUSTOMER_ID) {
-    showError('No customer selected.');
+    // No customer_id — redirect to first customer
+    try {
+      const { data: { session: s } } = 
+        await supabaseClient.auth.getSession();
+      const headers = { "Accept": "application/json" };
+      if (s?.access_token) 
+        headers["Authorization"] = `Bearer ${s.access_token}`;
+      const res = await fetch(`${API_BASE}/customers`, { headers });
+      if (res.ok) {
+        const customers = await res.json();
+        if (customers && customers.length > 0) {
+          window.location.href = 
+            `./customer_profile.html?customer_id=${customers[0].id}`;
+          return;
+        }
+      }
+    } catch (_) {}
+    showError('No customer selected. Go to the dashboard and click a customer.');
     return;
   }
+
+  // Show skeletons while loading
   showSkeleton(true);
+
   try {
     const [customer, tickets, memories] = await Promise.all([
       fetchJSON(`/customers/${CUSTOMER_ID}`),
       fetchJSON(`/customers/${CUSTOMER_ID}/tickets`),
       fetchJSON(`/customers/${CUSTOMER_ID}/memories`),
     ]);
+
+    // Hide skeletons before populating
+    showSkeleton(false);
 
     populateHeader(customer);
     populateKPIs(customer, tickets);
@@ -34,11 +56,16 @@ const CUSTOMER_ID = params.get('customer_id');
     populateBehavior(memories);
     populatePreferences(memories);
     populateFrustrations(memories);
+    wireBackBtn();
+    wireStartSession();
+
   } catch (err) {
     console.error('Failed to load customer profile:', err);
-    showError('Could not connect to the backend. Make sure the API server is running.');
-  } finally {
     showSkeleton(false);
+    showError(
+      'Could not load customer data. ' +
+      (err.message || 'Check the API server is running.')
+    );
   }
 })();
 
@@ -154,7 +181,7 @@ function populateMemoryGraph(memories) {
             <div class="confidence-ring-inner">${conf}%</div>
           </div>
           <div>
-            <span class="text-base font-semibold text-foreground">${escapeHtml(f.content)}</span>
+            <span class="text-base font-semibold text-foreground">${escapeHtml(window.formatMemory(f))}</span>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
               <span class="text-xs text-muted-foreground">${conf}% confidence</span>
@@ -174,7 +201,7 @@ function populateBehavior(memories) {
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #f0f2f5 0%, #f5f6f8 100%);">
         <span class="flex-shrink-0" style="font-size: 20px; line-height: 1;">⚡</span>
         <div class="flex-1 min-w-0">
-          <span class="body-text font-medium text-foreground block">${escapeHtml(obs[0].content)}</span>
+          <span class="body-text font-medium text-foreground block">${escapeHtml(window.formatMemory(obs[0]))}</span>
           <div class="flex items-center gap-2 mt-0.5">
             <div class="confidence-dots">${renderDots(75)}</div>
             <span class="text-xs text-muted-foreground">75% confidence</span>
@@ -193,7 +220,7 @@ function populatePreferences(memories) {
   container.innerHTML = likes.length
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
         <span class="flex-shrink-0" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: var(--color-success); color: white; font-size: 12px; font-weight: 700;">✓</span>
-        <span class="body-text font-medium text-foreground">${escapeHtml(likes[0].content)}</span>
+        <span class="body-text font-medium text-foreground">${escapeHtml(window.formatMemory(likes[0]))}</span>
       </div>`
     : '<div class="body-text text-muted-foreground">No preferences recorded.</div>';
 }
@@ -202,13 +229,16 @@ function populateFrustrations(memories) {
   const container = document.getElementById('frustrations-container');
   if (!container) return;
   const risks = memories.filter(m =>
-    m.memory_type === 'risk_signal' || m.context === 'incident'
+    m.memory_type === 'experience' ||
+    m.context === 'incident' ||
+    m.content.toLowerCase().includes('escalat') ||
+    m.content.toLowerCase().includes('frustrat')
   ).slice(0, 1);
   container.innerHTML = risks.length
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
         <span class="flex-shrink-0" style="font-size: 18px; line-height: 1;">⚠</span>
         <div class="flex-1 min-w-0">
-          <span class="body-text font-medium text-foreground block">${escapeHtml(risks[0].content)}</span>
+          <span class="body-text font-medium text-foreground block">${escapeHtml(window.formatMemory(risks[0]))}</span>
           <span class="text-xs text-warning font-medium">High priority</span>
         </div>
       </div>`
@@ -216,15 +246,58 @@ function populateFrustrations(memories) {
 }
 
 function showSkeleton(show) {
-  document.querySelectorAll('.skeleton').forEach(el => el.classList.toggle('hidden', !show));
-  document.querySelectorAll('.skeleton-target').forEach(el => el.classList.toggle('hidden', show));
+  document.querySelectorAll('.skeleton').forEach(el => {
+    el.style.display = show ? '' : 'none';
+    el.classList.toggle('hidden', !show);
+  });
+  document.querySelectorAll('.skeleton-target').forEach(el => {
+    el.style.display = show ? 'none' : '';
+    el.classList.toggle('hidden', show);
+  });
 }
 
 function showError(msg) {
-  showSkeleton(false);
-  const target = document.querySelector('.skeleton-target');
-  if (target) {
-    target.innerHTML = `<div class="card-base text-center py-10"><div class="text-muted-foreground text-base">⚠ ${escapeHtml(msg)}</div></div>`;
+  document.querySelectorAll('.skeleton').forEach(el => {
+    el.style.display = 'none';
+    el.classList.add('hidden');
+  });
+  document.querySelectorAll('.skeleton-target').forEach(el => {
+    el.style.display = '';
+    el.classList.remove('hidden');
+  });
+
+  const targets = [
+    document.getElementById('timeline-container'),
+    document.getElementById('memory-graph-container'),
+    document.querySelector('.skeleton-target'),
+    document.querySelector('main'),
+    document.body,
+  ];
+
+  const errorHtml = `
+    <div style="padding:32px;text-align:center;
+                color:var(--color-muted-foreground,#6b7280)">
+      <div style="font-size:32px;margin-bottom:12px">⚠</div>
+      <div style="font-size:15px;font-weight:500;
+                  color:var(--color-foreground,#111);
+                  margin-bottom:6px">
+        Failed to load
+      </div>
+      <div style="font-size:13px">${escapeHtml(msg)}</div>
+      <button onclick="window.history.back()"
+        style="margin-top:16px;padding:8px 16px;
+               border-radius:8px;border:none;cursor:pointer;
+               background:var(--color-primary,#6366f1);
+               color:white;font-size:13px">
+        ← Go back
+      </button>
+    </div>`;
+
+  for (const el of targets) {
+    if (el) {
+      el.innerHTML = errorHtml;
+      break;
+    }
   }
 }
 
@@ -248,6 +321,22 @@ function renderDots(pct) {
 
 function computeConfidence(memory) {
   return memory.id ? 80 + (memory.id.charCodeAt(memory.id.length - 1) % 20) : 85;
+}
+
+function wireBackBtn() {
+  const btn = document.getElementById('backBtn');
+  if (btn) {
+    btn.addEventListener('click', () => window.history.back());
+  }
+}
+
+function wireStartSession() {
+  const btn = document.getElementById('startSessionBtn');
+  if (btn && CUSTOMER_ID) {
+    btn.addEventListener('click', () => {
+      window.location.href = `./liveagent.html?customer_id=${CUSTOMER_ID}`;
+    });
+  }
 }
 
 function escapeHtml(str) {

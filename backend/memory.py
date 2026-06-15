@@ -89,15 +89,10 @@ async def ensure_bank(customer_id: str, customer_name: str = "") -> None:
     )
 
     try:
-        client.create_bank(
-            bank_id=customer_id,
+        await client.acreate_bank(
+            customer_id,
             name=customer_name or customer_id,
             background=background,
-            disposition={
-                "skepticism": 2,  # 1–5 scale: 2 = mostly trusting
-                "literalism": 2,  # 1–5 scale: 2 = reads context flexibly
-                "empathy": 5,  # 1–5 scale: 5 = maximum empathy
-            },
         )
         _bank_cache.add(customer_id)
         logger.info("Memory bank created | customer_id=%s", customer_id)
@@ -135,17 +130,15 @@ async def seed_customer_memory(
     client = _get_client()
     await ensure_bank(customer_id, customer_name)
 
-    baseline_facts = [
+    items = [
         {
             "content": f"Customer name: {customer_name}. Email: {email}.",
             "context": "customer onboarding",
         },
     ]
 
-    items = [{"content": f["content"], "context": f["context"]} for f in baseline_facts]
-
     try:
-        client.retain_batch(bank_id=customer_id, items=items)
+        await client.aretain_batch(bank_id=customer_id, items=items)
         logger.info(
             "Seeded baseline memories | customer_id=%s | count=%d",
             customer_id,
@@ -161,6 +154,17 @@ async def seed_customer_memory(
 
 
 # ── recall ───────────────────────────────────────────────────
+
+
+_SAFE_FALLBACK_QUERY = "recent customer activity"
+
+
+def _safe_query(query: str) -> str:
+    """Guard against queries Hindsight would reject (no word characters)."""
+    q = (query or "").strip()
+    if not q or not any(c.isalnum() for c in q):
+        return _SAFE_FALLBACK_QUERY
+    return q
 
 
 async def retrieve_memories(
@@ -181,14 +185,14 @@ async def retrieve_memories(
     client = _get_client()
     await ensure_bank(customer_id)
 
+    safe = _safe_query(query)
     start = time.time()
 
     try:
-        result = client.recall(
+        result = await client.arecall(
             bank_id=customer_id,
-            query=query,
-            budget="mid",  # "low" | "mid" | "high" — mid balances speed vs depth
-            include_entities=True,  # pull in entity graph (environment, product versions, etc.)
+            query=safe,
+            budget="mid",
         )
         elapsed_ms = round((time.time() - start) * 1000)
 
@@ -199,7 +203,7 @@ async def retrieve_memories(
                     id=str(uuid4()),
                     customer_id=customer_id,
                     content=m.text,
-                    context=getattr(m, "context", "recalled"),
+                    context=getattr(m, "context", None) or "recalled",
                     memory_type=_map_memory_type(getattr(m, "type", "world_fact")),
                     created_at=datetime.now(timezone.utc),
                 )
@@ -212,6 +216,15 @@ async def retrieve_memories(
             len(memories),
             elapsed_ms,
         )
+        if memories:
+            for i, m in enumerate(memories[:10]):
+                logger.info(
+                    "  memory[%d] | type=%s | context=%s | text=%r",
+                    i,
+                    m.memory_type,
+                    m.context,
+                    m.content[:200],
+                )
         return memories, elapsed_ms
 
     except Exception as exc:
@@ -266,12 +279,12 @@ async def save_memory(
             bank_id=customer_id,
             content=content,
             context=context,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
         if metadata:
             kwargs["metadata"] = metadata
 
-        client.retain(**kwargs)
+        await client.aretain(**kwargs)
         logger.info(
             "retain complete | customer_id=%s | context=%s | chars=%d",
             customer_id,
@@ -297,23 +310,52 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
     """
     Return all memories stored for a customer.
     Used by GET /customers/{customer_id}/memories.
-    Paginates up to 200 entries (enough for a hackathon demo).
+    Uses a broad recall query to fetch relevant memories since
+    list_memories is not available in the Hindsight SDK.
     """
     client = _get_client()
     await ensure_bank(customer_id)
 
     try:
-        result = client.list_memories(bank_id=customer_id, limit=200, offset=0)
+        result = await client.arecall(
+            bank_id=customer_id,
+            query="customer history",
+            budget="high",
+        )
 
         memories: list[MemoryEntry] = []
-        for m in result.items:
+        for m in result.results:
+            content = (
+                getattr(m, "text", None)
+                or getattr(m, "content", None)
+                or getattr(m, "summary", None)
+                or getattr(m, "fact", None)
+                or getattr(m, "statement", None)
+            )
+            if not content or not isinstance(content, str):
+                continue
+            if content.strip().startswith("{'") or content.strip().startswith('{"'):
+                continue
+
+            raw_type = (
+                getattr(m, "fact_type", None)
+                or getattr(m, "memory_type", None)
+                or getattr(m, "type", None)
+                or "world_fact"
+            )
+            context = (
+                getattr(m, "context", None) or getattr(m, "category", None) or "stored"
+            )
+            if not isinstance(context, str) or not context:
+                context = "stored"
+
             memories.append(
                 MemoryEntry(
-                    id=str(uuid4()),
+                    id=str(getattr(m, "id", uuid4())),
                     customer_id=customer_id,
-                    content=str(m),
-                    context="stored",
-                    memory_type="world_fact",
+                    content=content,
+                    context=context,
+                    memory_type=_map_memory_type(str(raw_type)),
                     created_at=datetime.now(timezone.utc),
                 )
             )
@@ -354,12 +396,17 @@ async def reflect(customer_id: str, query: str) -> str:
     await ensure_bank(customer_id)
 
     try:
-        response = client.reflect(
+        response = await client.areflect(
             bank_id=customer_id,
             query=query,
             budget="high",
         )
         logger.info("reflect complete | customer_id=%s | query=%r", customer_id, query)
+        logger.info(
+            "reflect output | customer_id=%s | text=%r",
+            customer_id,
+            response.text[:500],
+        )
         return response.text
 
     except Exception as exc:

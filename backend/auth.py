@@ -26,32 +26,29 @@ def get_supabase_client():
     return _supabase
 
 
-def _get_client():
-    global _supabase
-    if _supabase is None:
-        from supabase import create_client
-
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set")
-        _supabase = create_client(url, key)
-    return _supabase
-
-
 def _verify_token(token: str) -> dict:
-    client = _get_client()
+    client = get_supabase_client()
     user = client.auth.get_user(token)
-    user_id = user.user.id
-    email = user.user.email or ""
+    user_obj = user.user
+    user_id = user_obj.id
+    email = user_obj.email or ""
+
+    # Pull name from Google OAuth or email signup metadata
+    meta = user_obj.user_metadata or {}
+    full_name = meta.get("full_name") or meta.get("name") or email.split("@")[0]
 
     role = _get_user_role(user_id, client)
-    return {"user_id": user_id, "email": email, "role": role}
+    return {
+        "user_id": user_id,
+        "email": email,
+        "role": role,
+        "full_name": full_name,
+    }
 
 
 def _get_user_role(user_id: str, client=None) -> str:
     if client is None:
-        client = _get_client()
+        client = get_supabase_client()
     try:
         rows = (
             client.table("user_roles")

@@ -148,3 +148,9 @@ async def escalate_ticket(ticket_id: str) -> Ticket:
                 ticket.status = "escalated"
                 return ticket
     raise ValueError(f"Ticket {ticket_id} not found")
+
+
+async def update_frustration_score(customer_id: str, score: int) -> None:
+    if customer_id in _MOCK_CUSTOMERS:
+        c = _MOCK_CUSTOMERS[customer_id]
+        c.frustration_score = max(0, min(100, score))

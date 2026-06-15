@@ -1,10 +1,4 @@
-const ADMIN_EMAIL = "your-admin@email.com";
-
-const SUPABASE_URL =
-"https://ckjypqgnkovsdezsjjqo.supabase.co";
-
-const SUPABASE_ANON_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
+const { ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY } = window.CONFIG;
 
 const supabaseClient =
 window.supabase.createClient(
@@ -35,11 +29,67 @@ document.querySelector(".primary-btn");
 
 let isLogin = true;
 
-function roleRedirect(email) {
+function showFormError(msg) {
+  const el = document.getElementById("formError");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle("hidden", !msg);
+}
+
+function showFormSuccess(msg) {
+  const el = document.getElementById("formSuccess");
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle("hidden", !msg);
+}
+
+function setLoading(loading) {
+  submitBtn.disabled = loading;
+  submitBtn.textContent = loading
+    ? (isLogin ? "Signing in…" : "Creating account…")
+    : (isLogin ? "Sign In" : "Sign Up");
+}
+
+async function ensureCustomerProfile() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session?.access_token) {
+      console.warn("ensureCustomerProfile: no session token");
+      return;
+    }
+    
+    const start = Date.now();
+    const response = await fetch(`${window.CONFIG.API_BASE}/my/setup-profile`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      }
+    });
+    const elapsed = Date.now() - start;
+
+    let body = "?";
+    try { body = JSON.stringify(await response.json()); } catch (_) { body = await response.text().catch(() => "?"); }
+
+    console.log(`ensureCustomerProfile | POST /my/setup-profile → ${response.status} (${elapsed}ms)`, body);
+
+    if (!response.ok) {
+      console.warn("ensureCustomerProfile: POST /my/setup-profile returned error", {
+        status: response.status,
+        body,
+      });
+    }
+  } catch (e) {
+    console.warn("ensureCustomerProfile threw:", e);
+  }
+}
+
+async function roleRedirect(email) {
   if (email === ADMIN_EMAIL) {
-    window.location.href = "/frontend/dashboard.html";
+    window.location.href = "./dashboard.html";
   } else {
-    window.location.href = "/frontend/chat.html";
+    await ensureCustomerProfile();
+    window.location.href = "./chat.html";
   }
 }
 
@@ -97,165 +147,94 @@ confirmPasswordField.classList.remove("hidden");
 
 });
 
-async function signUp(
- email,
- password
-){
+async function signUp(email, password) {
+  showFormError("");
+  const fullName = document.getElementById("fullName").value;
 
- const fullName =
- document
- .getElementById("fullName")
- .value;
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
 
- const { data, error }
- =
- await supabaseClient.auth.signUp({
+    if (error) {
+      showFormError(error.message);
+      return;
+    }
 
- email,
- password,
- options:{
-  data:{
-   full_name:fullName
+    showFormSuccess("Account created! Please verify your email.");
+  } catch (e) {
+    showFormError(e.message ?? "Sign up failed");
   }
- }
-
- });
-
-if(error){
-
-alert(error.message);
-return;
-
 }
 
-if (data?.user) {
-  await supabaseClient.from('user_roles').insert({
-    user_id: data.user.id,
-    role: 'customer'
-  });
-}
+async function signIn(email, password) {
+  showFormError("");
 
-alert(
-"Account created! Please verify your email."
-);
+  try {
+    const { data, error } =
+      await supabaseClient.auth.signInWithPassword({ email, password });
 
-}
+    if (error) {
+      showFormError(error.message);
+      return;
+    }
 
-async function signIn(email,password){
-
- const { data,error } =
- await supabaseClient.auth.signInWithPassword({
-   email,
-   password
- });
-
- console.log("LOGIN DATA:", data);
- console.log("LOGIN ERROR:", error);
-
- if(error){
-   alert(error.message);
-   return;
- }
-
- alert("Login Success");
- roleRedirect(email);
+    roleRedirect(email);
+  } catch (e) {
+    showFormError(e.message ?? "Sign in failed");
+  }
 }
 
 // =========================
 // FORM SUBMIT
 // =========================
 
-document
-.getElementById("authForm")
-.addEventListener(
-"submit",
-async(e)=>{
+document.getElementById("authForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  showFormError("");
+  showFormSuccess("");
 
-e.preventDefault();
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-const email =
-document
-.getElementById("email")
-.value;
+  if (!isLogin) {
+    const confirmPassword = document.getElementById("confirmPassword").value;
+    if (password !== confirmPassword) {
+      showFormError("Passwords do not match");
+      return;
+    }
+  }
 
-const password =
-document
-.getElementById("password")
-.value;
-
-if(isLogin){
-
-await signIn(
-email,
-password
-);
-
-}else{
-
-const confirmPassword =
-document
-.getElementById(
-"confirmPassword"
-)
-.value;
-
-if(
-password !==
-confirmPassword
-){
-
-alert(
-"Passwords do not match"
-);
-
-return;
-
-}
-
-await signUp(
-email,
-password
-);
-
-}
-
-}
-);
+  setLoading(true);
+  try {
+    if (isLogin) {
+      await signIn(email, password);
+    } else {
+      await signUp(email, password);
+    }
+  } catch (e) {
+    showFormError(e.message ?? "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+});
 
 // GOOGLE LOGIN
 
-document
-.querySelector(".google-btn")
-.addEventListener(
-"click",
-async()=>{
-
-const {
-error
-}
-=
-await supabaseClient.auth.signInWithOAuth({
-
-provider:"google",
-
-options:{
-
-redirectTo:
-window.location.origin +
-"/frontend/login.html"
-
-}
-
+document.querySelector(".google-btn").addEventListener("click", async () => {
+  showFormError("");
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + "/login.html" },
+    });
+    if (error) showFormError(error.message);
+  } catch (e) {
+    showFormError(e.message ?? "Google sign in failed");
+  }
 });
-
-if(error){
-
-alert(error.message);
-
-}
-
-}
-);
 
 // Handle OAuth callback — detect session after redirect
 supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -265,19 +244,16 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
   }
 });
 
-async function checkSession(){
-
-const {
-data:{session}
-}
-=
-await supabaseClient.auth.getSession();
-
-if(session?.user){
-  const email = session.user.email;
-  if (email) roleRedirect(email);
-}
-
+async function checkSession() {
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) {
+      const email = session.user.email;
+      if (email) roleRedirect(email);
+    }
+  } catch (e) {
+    // Session check failed — user will see the login form
+  }
 }
 
 checkSession();

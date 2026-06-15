@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/frontend/css/chat.css" />
+  <link rel="stylesheet" href="./css/chat.css" />
 </head>
 <body>
 
@@ -15,6 +15,7 @@
   <div id="errorScreen" class="error-screen hidden">
     <h2>Account not found</h2>
     <p>Your account isn't set up yet. Contact support.</p>
+    <pre id="errorDetail" style="margin-top:16px;font-size:12px;background:#1e1e2e;padding:12px;border-radius:8px;text-align:left;overflow:auto;max-width:420px;color:#f8c;white-space:pre-wrap;"></pre>
   </div>
 
   <!-- ─── PAGE SHELL ───────────────────────────────────────── -->
@@ -191,7 +192,8 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/frontend/js/chat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49"></script>
+    <script type="module" src="./js/config.js"></script>
+  <script type="module" src="./js/chat.js"></script>
 </body>
 </html>

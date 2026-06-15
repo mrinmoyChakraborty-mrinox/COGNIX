@@ -19,11 +19,13 @@
 #   9. Demo Endpoint
 # ============================================================
 
+import json
 import os
 import logging
 import logging.config
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from dotenv import load_dotenv
 from fastapi import (
@@ -52,7 +54,8 @@ from models import (
 
 # ── env ─────────────────────────────────────────────────────
 
-load_dotenv()
+load_dotenv("backend/.env")
+load_dotenv()  # fallback to root .env
 
 # ── logging ──────────────────────────────────────────────────
 
@@ -75,6 +78,7 @@ if USE_MOCK:
         create_ticket,
         resolve_ticket,
         escalate_ticket,
+        update_frustration_score,
     )
 
     logger.info("Using mock repositories")
@@ -83,6 +87,7 @@ else:
         get_customer,
         list_customers,
         create_customer,
+        update_frustration_score,
     )
     from repositories.ticket_repository import (
         get_tickets,
@@ -102,9 +107,51 @@ from memory import (
     seed_customer_memory,
     build_retrieval_viz,
 )
-from llm import generate_response
+from agent import generate_response, generate_support_response
 
 from auth import get_current_user, get_supabase_client, require_admin, verify_ws_token
+
+
+# ── Session Manager ─────────────────────────────────────────
+# Tracks active agent WebSocket sessions and pending customer replies.
+
+
+class SessionManager:
+    """In-memory session state. One agent WebSocket per customer_id."""
+
+    def __init__(self):
+        self._sessions: dict[str, dict] = {}
+        self._pending_replies: dict[str, list[dict]] = {}
+
+    def register(self, customer_id: str, websocket: WebSocket) -> None:
+        self._sessions[customer_id] = {
+            "websocket": websocket,
+            "agent_id": "admin",
+            "started_at": datetime.now(timezone.utc),
+        }
+        logger.info("Session registered | customer_id=%s", customer_id)
+
+    def unregister(self, customer_id: str) -> None:
+        self._sessions.pop(customer_id, None)
+        logger.info("Session unregistered | customer_id=%s", customer_id)
+
+    def is_agent_connected(self, customer_id: str) -> bool:
+        return customer_id in self._sessions
+
+    def get_agent_ws(self, customer_id: str) -> WebSocket | None:
+        s = self._sessions.get(customer_id)
+        return s["websocket"] if s else None
+
+    def add_pending_reply(self, customer_id: str, reply: dict) -> None:
+        if customer_id not in self._pending_replies:
+            self._pending_replies[customer_id] = []
+        self._pending_replies[customer_id].append(reply)
+
+    def pop_pending_replies(self, customer_id: str) -> list[dict]:
+        return self._pending_replies.pop(customer_id, [])
+
+
+sessions = SessionManager()
 
 
 # ── startup / shutdown ───────────────────────────────────────
@@ -123,12 +170,12 @@ def _validate_env() -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(
+    logger.info(
         "\n"
         "+----------------------------------------+\n"
         "|          COGNIX  v1.0.0                |\n"
         "| FastAPI | Hindsight | Groq | Supabase  |\n"
-        "+----------------------------------------+\n"
+        "+----------------------------------------+"
     )
     missing = _validate_env()
     if missing:
@@ -150,11 +197,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+allowed_origins = [o.strip() for o in FRONTEND_URL.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -283,7 +331,7 @@ async def support_chat(req: SupportRequest, _: dict = Depends(require_admin)):
     memories, _ = await retrieve_memories(req.customer_id, req.message)
     reflection = await reflect(req.customer_id, req.message)
 
-    response_text, suggested_solution = await generate_response(
+    response_text, suggested_solution, _ = await generate_response(
         customer, memories, req.message, reflection
     )
 
@@ -318,7 +366,7 @@ async def customer_chat(req: ChatRequest, user: dict = Depends(get_current_user)
     await ensure_bank(req.customer_id, customer.name)
     memories, _ = await retrieve_memories(req.customer_id, req.message)
     reflection = await reflect(req.customer_id, req.message)
-    response_text, suggested_solution = await generate_response(
+    response_text, suggested_solution, _ = await generate_response(
         customer, memories, req.message, reflection
     )
     await save_memory(
@@ -345,6 +393,12 @@ async def customer_chat(req: ChatRequest, user: dict = Depends(get_current_user)
 async def resolve_ticket_endpoint(ticket_id: str, _: dict = Depends(require_admin)):
     try:
         ticket = await resolve_ticket(ticket_id)
+        # Save resolution to Hindsight so future reflect() calls know about it
+        await save_memory(
+            ticket.customer_id,
+            f"Ticket resolved: '{ticket.subject}'. Resolved on {datetime.now(timezone.utc).strftime('%b %d, %Y')}.",
+            "ticket resolution",
+        )
         return ticket
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -353,7 +407,7 @@ async def resolve_ticket_endpoint(ticket_id: str, _: dict = Depends(require_admi
 # ── Customer self-service endpoints ──────────────────────────
 
 
-async def _get_customer_by_email(email: str):
+async def _get_customer_by_email(email: str) -> Customer | None:
     """Look up customer row by email — mock-aware."""
     if USE_MOCK:
         customers = await list_customers()
@@ -361,124 +415,321 @@ async def _get_customer_by_email(email: str):
             if c.email == email:
                 return c
         return None
-    client = get_supabase_client()
-    rows = client.table("customers").select("*").eq("email", email).limit(1).execute()
+    # Use the async repo client, not the sync auth client
+    from repositories.customer_repository import _get_client as _get_repo_client
+    from repositories.customer_repository import _row_to_customer
+
+    client = await _get_repo_client()
+    rows = (
+        await client.table("customers")
+        .select("*")
+        .eq("email", email)
+        .limit(1)
+        .execute()
+    )
     if rows.data and len(rows.data) > 0:
-        return rows.data[0]
+        return _row_to_customer(rows.data[0])
     return None
 
 
-async def _get_tickets_by_customer(customer_id: str):
+async def _get_tickets_by_customer(customer_id: str) -> list[Ticket]:
     """Get tickets for a customer — mock-aware."""
     if USE_MOCK:
         return await get_tickets(customer_id)
-    client = get_supabase_client()
-    rows = (
-        client.table("tickets")
-        .select("*")
-        .eq("customer_id", customer_id)
-        .order("created_at", desc=True)
-        .execute()
-    )
-    return rows.data if rows.data else []
+    # Already have get_tickets from ticket_repository — just use it directly
+    return await get_tickets(customer_id)
 
 
-async def _create_ticket_for_customer(customer_id: str, subject: str):
+async def _create_ticket_for_customer(customer_id: str, subject: str) -> Ticket:
     """Create a ticket and increment ticket_count — mock-aware."""
-    import uuid
-
-    ticket_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
     if USE_MOCK:
+        import uuid
         from dev.mock_repository import TICKETS, CUSTOMERS
 
-        ticket = {
-            "id": ticket_id,
-            "customer_id": customer_id,
-            "subject": subject,
-            "status": "open",
-            "created_at": now,
-            "resolved_at": None,
-        }
-        TICKETS.setdefault(customer_id, []).insert(0, ticket)
+        ticket = Ticket(
+            id=str(uuid.uuid4()),
+            customer_id=customer_id,
+            subject=subject,
+            status="open",
+            created_at=datetime.now(timezone.utc),
+        )
+        TICKETS.setdefault(customer_id, []).insert(0, ticket.model_dump())
         for c in CUSTOMERS:
             if c["id"] == customer_id:
                 c["ticket_count"] = c.get("ticket_count", 0) + 1
                 break
         return ticket
-    client = get_supabase_client()
-    ticket = {
-        "id": ticket_id,
-        "customer_id": customer_id,
-        "subject": subject,
-        "status": "open",
-        "created_at": now,
-    }
-    client.table("tickets").insert(ticket).execute()
-    client.rpc("increment_ticket_count", {"cust_id": customer_id}).execute()
-    return ticket
+    # Use the existing async repo function — it handles increment too
+    return await create_ticket(customer_id, subject)
 
 
 @app.get("/my/profile")
 async def my_profile(user: dict = Depends(get_current_user)):
-    email = user.get("email", "")
-    customer = await _get_customer_by_email(email)
-    if customer is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Customer profile not found — contact support",
-        )
+    customer = await _resolve_customer(user)
+    logger.info(
+        "/my/profile returning | customer_id=%s | email=%s",
+        customer.id,
+        customer.email,
+    )
     return customer
+
+
+@app.post("/my/setup-profile")
+async def setup_my_profile(user: dict = Depends(get_current_user)):
+    """
+    Create a customer profile for the authenticated user if one doesn't exist.
+    Called by frontend after signup/email verification.
+    Idempotent — delegates to _resolve_customer.
+    """
+    customer = await _resolve_customer(user)
+
+    # Seed Hindsight memory bank on first profile creation
+    try:
+        await seed_customer_memory(
+            customer_id=customer.id,
+            customer_name=customer.name,
+            email=customer.email,
+        )
+    except Exception:
+        logger.warning(
+            "Could not seed memory bank on setup-profile | customer_id=%s",
+            customer.id,
+        )
+
+    logger.info(
+        "Customer profile ready | customer_id=%s | email=%s",
+        customer.id,
+        customer.email,
+    )
+    return customer
+
+
+async def _resolve_customer(user: dict) -> Customer:
+    """
+    Resolve the authenticated user to a Customer profile,
+    auto-creating if missing. Used by all /my/* endpoints.
+    """
+    email = user.get("email", "")
+    full_name = user.get("full_name") or email.split("@")[0]
+
+    if USE_MOCK:
+        from dev.mock_repository import CUSTOMERS
+
+        for c in CUSTOMERS:
+            if c["email"] == email:
+                return Customer(**c)
+        from repositories.customer_repository import create_customer
+        from models import CreateCustomerRequest
+
+        return await create_customer(CreateCustomerRequest(name=full_name, email=email))
+
+    from repositories.customer_repository import get_or_create_customer_profile
+
+    logger.info(
+        "_resolve_customer | email=%s | full_name=%s | user_id=%s",
+        email,
+        full_name,
+        user.get("user_id", "?"),
+    )
+    return await get_or_create_customer_profile(email=email, name=full_name)
 
 
 @app.get("/my/tickets")
 async def my_tickets(user: dict = Depends(get_current_user)):
-    email = user.get("email", "")
-    customer = await _get_customer_by_email(email)
-    if customer is None:
-        raise HTTPException(status_code=404, detail="Customer profile not found")
-    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
-    tickets = await _get_tickets_by_customer(customer_id)
-    return tickets
+    customer = await _resolve_customer(user)
+    return await _get_tickets_by_customer(customer.id)
 
 
 @app.post("/my/tickets")
 async def create_my_ticket(
     req: CreateTicketRequest, user: dict = Depends(get_current_user)
 ):
-    email = user.get("email", "")
-    customer = await _get_customer_by_email(email)
-    if customer is None:
-        raise HTTPException(status_code=404, detail="Customer profile not found")
-    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
-    ticket = await _create_ticket_for_customer(customer_id, req.subject)
-    return ticket
+    customer = await _resolve_customer(user)
+
+    # Idempotency: prevent duplicate "General Support" tickets
+    if req.subject.lower() == "general support":
+        existing = await _get_tickets_by_customer(customer.id)
+        for t in existing:
+            if t.subject.lower() == "general support" and t.status == "open":
+                logger.info(
+                    "Reusing existing General Support ticket | customer_id=%s | ticket_id=%s",
+                    customer.id,
+                    t.id,
+                )
+                return t
+
+    return await _create_ticket_for_customer(customer.id, req.subject)
 
 
 @app.post("/my/chat")
 async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
-    email = user.get("email", "")
-    customer = await _get_customer_by_email(email)
-    if customer is None:
-        raise HTTPException(status_code=404, detail="Customer profile not found")
-    customer_id = customer["id"] if isinstance(customer, dict) else customer.id
-    customer_name = customer["name"] if isinstance(customer, dict) else customer.name
+    customer = await _resolve_customer(user)
 
-    await ensure_bank(customer_id, customer_name)
-    memories, _ = await retrieve_memories(customer_id, req.message)
-    reflection = await reflect(customer_id, req.message)
+    await ensure_bank(customer.id, customer.name)
+    memories, elapsed_ms = await retrieve_memories(customer.id, req.message)
+    reflection = await reflect(customer.id, req.message)
 
-    response_text, suggested_solution = await generate_response(
-        {"id": customer_id, "name": customer_name}, memories, req.message, reflection
+    customer_tickets = await get_tickets(customer.id)
+    result = await generate_support_response(
+        customer, memories, req.message, reflection, tickets=customer_tickets
     )
 
     await save_memory(
-        customer_id,
-        f'Customer: "{req.message[:120]}". Agent: "{response_text[:120]}".',
+        customer.id,
+        f'Customer: "{req.message[:120]}". Agent: "{result.response[:120]}".',
         "support session",
     )
 
-    return MyChatResponse(reply=response_text, suggested_solution=suggested_solution)
+    # Generate a unique reply ID for every reply delivered to the customer
+    reply_id = str(uuid4())
+
+    agent_ws = sessions.get_agent_ws(customer.id)
+    agent_connected = agent_ws is not None
+
+    if agent_connected:
+        # Push memory visualization to agent
+        try:
+            viz = build_retrieval_viz(req.message, memories, elapsed_ms)
+            logger.info(
+                "memory.update | customer_id=%s | memories=%d",
+                customer.id,
+                len(memories),
+            )
+            await agent_ws.send_json(
+                {
+                    "event": "memory.update",
+                    **viz,
+                }
+            )
+        except Exception:
+            logger.warning(
+                "Failed to push memory.update to agent WS | customer_id=%s",
+                customer.id,
+            )
+
+        # Push customer message + AI suggestion to live agent
+        try:
+            await agent_ws.send_json(
+                {
+                    "event": "chat.reply",
+                    "data": req.message,
+                    "suggested_reply": result.response,
+                    "suggested_solution": result.suggested_solution,
+                    "escalation_flag": result.escalation_flag,
+                    "escalation_reason": result.escalation_reason,
+                    "frustration_score": result.frustration_score,
+                    "memory_summary": result.memory_summary,
+                }
+            )
+        except Exception:
+            logger.warning(
+                "Failed to push chat.reply to agent WS | customer_id=%s",
+                customer.id,
+            )
+
+        # Check for pending agent replies
+        pending = sessions.pop_pending_replies(customer.id)
+        agent_reply = pending[-1]["text"] if pending else None
+
+        logger.info(
+            "my_chat | agent_connected=True | reply_id=%s | reply_source=%s | reply_text=%.200s | pending_count=%d | ai_text=%.200s",
+            reply_id,
+            "pending_reply" if agent_reply else "placeholder",
+            agent_reply or "An agent is reviewing your message.",
+            len(pending),
+            result.response,
+        )
+
+        return MyChatResponse(
+            reply=agent_reply or "An agent is reviewing your message.",
+            reply_id=reply_id,
+            suggested_solution=result.suggested_solution,
+            agent_connected=True,
+        )
+
+    # No agent connected — return AI reply directly
+    logger.info(
+        "my_chat | agent_connected=False | reply_id=%s | reply_source=ai_direct | reply_text=%.200s",
+        reply_id,
+        result.response,
+    )
+
+    return MyChatResponse(
+        reply=result.response,
+        reply_id=reply_id,
+        suggested_solution=result.suggested_solution,
+    )
+
+
+@app.get("/my/pending-replies")
+async def my_pending_replies(user: dict = Depends(get_current_user)):
+    """Customer polls this to receive agent replies in real time."""
+    customer = await _resolve_customer(user)
+    agent_connected = sessions.is_agent_connected(customer.id)
+    replies = sessions.pop_pending_replies(customer.id)
+    for r in replies:
+        logger.info(
+            "pending_replies | customer_id=%s | reply_id=%s | reply_text=%.200s | source=poll",
+            customer.id,
+            r.get("reply_id", "no_id"),
+            r.get("text", ""),
+        )
+    if not agent_connected:
+        logger.info(
+            "pending replies removed | customer_id=%s | agent_disconnected=%s",
+            customer.id,
+            not agent_connected,
+        )
+    return {"replies": replies, "agent_disconnected": not agent_connected}
+
+
+# ── Debug / Diagnostics ──────────────────────────────────────
+
+
+@app.get("/debug/me")
+async def debug_me(user: dict = Depends(get_current_user)):
+    """
+    Diagnostic endpoint: returns the authenticated user, Supabase client status,
+    and the resolved customer profile. Does NOT throw on failure — returns errors inline.
+    """
+    result = {
+        "user": {
+            "user_id": user.get("user_id", "?"),
+            "email": user.get("email", ""),
+            "role": user.get("role", "?"),
+            "full_name": user.get("full_name", "?"),
+        },
+        "supabase": {
+            "url_configured": bool(os.getenv("SUPABASE_URL")),
+            "key_configured": bool(os.getenv("SUPABASE_KEY")),
+        },
+        "customer": None,
+        "error": None,
+    }
+
+    try:
+        customer = await _resolve_customer(user)
+        result["customer"] = customer.model_dump() if customer else None
+    except Exception as exc:
+        logger.error("debug_me _resolve_customer failed", exc_info=True)
+        result["error"] = f"{type(exc).__name__}: {exc}"
+
+        # Fallback: try a raw client query to isolate the issue
+        try:
+            from repositories.customer_repository import _get_client
+
+            client = await _get_client()
+            fallback = (
+                await client.table("customers")
+                .select("count(*)", count="exact")
+                .execute()
+            )
+            result["supabase"]["raw_query"] = "ok"
+            result["supabase"]["row_count"] = getattr(fallback, "count", None)
+        except Exception as exc2:
+            result["supabase"]["raw_query"] = f"failed: {exc2}"
+
+    return result
 
 
 # ── WebSocket ────────────────────────────────────────────────
@@ -512,29 +763,56 @@ async def websocket_session(
             customer_id,
         )
 
+    # Register session so customer messages route here
+    sessions.register(customer_id, websocket)
+
+    # Flush any pending replies that accumulated while agent was offline
+    orphaned = sessions.pop_pending_replies(customer_id)
+    if orphaned:
+        logger.info(
+            "Flushing %d orphaned pending replies to reconnected agent | customer_id=%s",
+            len(orphaned),
+            customer_id,
+        )
+        for reply in orphaned:
+            rid = reply.get("reply_id", "no_id")
+            logger.info(
+                "orphan_flush | reply_id=%s | reply_text=%.200s",
+                rid,
+                reply.get("text", ""),
+            )
+            await websocket.send_json(
+                {
+                    "event": "agent_reply_sent",
+                    "data": reply["text"],
+                    "reply_id": rid,
+                }
+            )
+
     # ── Opening message ──────────────────────────────────────
-    # Humble greeting: signal that memory is loaded without being creepy.
-    # The wow moment comes AFTER the customer types their first message.
+    # Agent briefing: reconstruct the full support history from Hindsight
+    # so the agent sees synthesized context before the customer types.
     opening_reflection = await reflect(
         customer_id,
-        "Briefly summarise this customer's most recent unresolved issue or concern "
-        "in one sentence. If nothing is unresolved, say so.",
+        "Summarise this customer's full support history in 3-4 sentences. "
+        "Include: what issues they've had, what was tried, what worked, "
+        "and what might still be unresolved. Write it as a briefing for "
+        "a support agent who is about to start a live session with this customer.",
     )
 
     if opening_reflection:
         opening_text = (
-            f"Welcome back, {customer.name}.\n\n"
-            "I have access to your previous support history and can help "
-            "without you needing to repeat details.\n\n"
-            f"Quick note from your history: {opening_reflection}\n\n"
-            "How can I help you today?"
+            f"📋 Agent briefing for {customer.name}\n\n"
+            f"{opening_reflection}\n\n"
+            "──────────────────────\n"
+            "Customer is now connected. Waiting for their message."
         )
     else:
         opening_text = (
-            f"Welcome back, {customer.name}.\n\n"
-            "I have access to your previous support history and can help "
-            "without you needing to repeat details.\n\n"
-            "How can I help you today?"
+            f"📋 New session with {customer.name}\n\n"
+            "No prior history found in memory.\n\n"
+            "──────────────────────\n"
+            "Customer is now connected. Waiting for their message."
         )
 
     await websocket.send_json({"event": "opening", "data": opening_text})
@@ -542,64 +820,118 @@ async def websocket_session(
     # ── Message loop ─────────────────────────────────────────
     try:
         while True:
-            raw = await websocket.receive_text()
-            message = raw.strip()
-            if not message:
+            raw_message = await websocket.receive_text()
+
+            # Try to parse as JSON (agent reply) or plain text (customer message)
+            try:
+                parsed = json.loads(raw_message)
+                msg_type = parsed.get("type", "customer")
+                message_text = parsed.get("text", "")
+            except (json.JSONDecodeError, AttributeError):
+                msg_type = "customer"
+                message_text = raw_message
+
+            message_text = message_text.strip()
+            if not message_text:
                 continue
 
-            # Immediate feedback so the customer sees a typing indicator
+            logger.info("WS message type=%s", msg_type)
+
+            # ── Keepalive ping ────────────────────────────────
+            if msg_type == "ping":
+                continue
+
+            # ── Agent reply: no AI processing ────────────────
+            if msg_type == "agent_reply":
+                await save_memory(
+                    customer_id,
+                    f"Agent replied: {message_text[:120]}",
+                    "agent reply",
+                )
+                # Store pending reply so customer gets it on next /my/chat poll
+                reply_id = str(uuid4())
+                sessions.add_pending_reply(
+                    customer_id,
+                    {
+                        "reply_id": reply_id,
+                        "text": message_text,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                )
+                logger.info(
+                    "agent_reply stored as pending | reply_id=%s | reply_text=%.200s",
+                    reply_id,
+                    message_text,
+                )
+                logger.info(
+                    "pending replies stored | customer_id=%s | count=%d",
+                    customer_id,
+                    len(sessions._pending_replies.get(customer_id, [])),
+                )
+                # No echo — the optimistic render in sendAgentReplyText handles it.
+                # agent_reply_sent is only sent on reconnect (orphan flush below)
+                # to replay replies the agent missed while disconnected.
+                continue
+
+            # ── Customer message: run full AI pipeline ───────
+            message = message_text
+
+            # 1. Send status update
             await websocket.send_json(
                 {
                     "event": "status",
-                    "data": "thinking...",
                     "query": message,
                 }
             )
 
-            # 1. Retrieve memories — returns (memories, elapsed_ms)
+            # 2. Retrieve memories — returns (memories, elapsed_ms)
             memories, elapsed_ms = await retrieve_memories(customer_id, message)
 
-            # 2. Build the retrieval visualisation payload and push it
-            #    to the agent panel BEFORE the LLM has even finished.
-            #    This makes the panel feel live and fast.
+            # 3. Build the retrieval visualisation payload
             viz = build_retrieval_viz(message, memories, elapsed_ms)
+            logger.info(
+                "memory.update | customer_id=%s | memories=%d",
+                customer_id,
+                len(memories),
+            )
             await websocket.send_json(
                 {
                     "event": "memory.update",
-                    **viz,  # query, hits, total, retrieval_time_ms
+                    **viz,
                 }
             )
 
-            # 3. Reflect — synthesised summary over all memories
+            # 4. Reflect — synthesised summary over all memories
             reflection = await reflect(customer_id, message)
 
-            # 4. Generate LLM response
-            response_text, suggested_solution = await generate_response(
-                customer, memories, message, reflection
+            # 5. Fetch tickets and generate full support result
+            customer_tickets = await get_tickets(customer_id)
+            result = await generate_support_response(
+                customer, memories, message, reflection, tickets=customer_tickets
             )
 
-            # 5. Save this interaction to memory (async-friendly — fire and don't wait)
-            await save_memory(
-                customer_id,
-                f'Customer said: "{message[:120]}". '
-                f'Agent replied: "{response_text[:120]}".',
-                "support session",
-            )
-
-            # 6. Compute escalation flag from customer's frustration score
-            frustration_score = customer.frustration_score
-            escalation_flag = frustration_score > 70
-
-            # 7. Send reply to frontend
+            # 6. Send suggested reply to agent
             await websocket.send_json(
                 {
                     "event": "chat.reply",
-                    "data": response_text,
-                    "suggested_solution": suggested_solution,
-                    "escalation_flag": escalation_flag,
-                    "frustration_score": frustration_score,
+                    "data": message,
+                    "suggested_reply": result.response,
+                    "suggested_solution": result.suggested_solution,
+                    "escalation_flag": result.escalation_flag,
+                    "escalation_reason": result.escalation_reason,
+                    "frustration_score": result.frustration_score,
+                    "memory_summary": result.memory_summary,
                 }
             )
+
+            # 7. Save memory and update frustration score
+            await save_memory(
+                customer_id,
+                f'Customer: "{message[:120]}". '
+                f'Agent suggested: "{result.response[:80]}".',
+                "support session",
+            )
+            await update_frustration_score(customer_id, result.frustration_score)
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected | customer_id=%s", customer_id)
@@ -614,6 +946,8 @@ async def websocket_session(
             await websocket.close(code=1011, reason="Internal server error")
         except Exception:
             pass
+    finally:
+        sessions.unregister(customer_id)
 
 
 # ── Demo endpoint ────────────────────────────────────────────
@@ -710,4 +1044,5 @@ if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    reload = os.getenv("UVICORN_RELOAD", "").lower() in ("true", "1", "yes")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)

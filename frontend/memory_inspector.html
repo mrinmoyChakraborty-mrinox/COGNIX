@@ -1,21 +1,15 @@
-<div
-  class="export-wrapper"
-  style="
-    width: 1440px;
-    min-height: 812px;
-    position: relative;
-    font-family: var(--font-family-body);
-    background-color: var(--background);
-  "
->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
-  <html>
-    <head>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>COGNIX - Memory Inspector</title>
       <style>
         /*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
         @layer properties;
@@ -322,6 +316,162 @@
         @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
         .skeleton { display: block; }
         .skeleton-bar { background: linear-gradient(90deg, var(--color-muted) 25%, var(--color-border) 50%, var(--color-muted) 75%); background-size: 200px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+
+        /* Facts carousel — horizontal scrollable cards */
+        .facts-carousel {
+          display: flex;
+          overflow-x: auto;
+          gap: 10px;
+          scroll-snap-type: x mandatory;
+          padding: 4px 0 8px;
+        }
+        .facts-carousel::-webkit-scrollbar { height: 4px; }
+        .facts-carousel::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+        .fact-card {
+          flex-shrink: 0;
+          width: 200px;
+          background: var(--color-card);
+          border-radius: var(--radius-md);
+          border: 1px solid var(--color-border);
+          padding: 10px 12px;
+          scroll-snap-align: start;
+          cursor: pointer;
+          transition: box-shadow 0.15s ease;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .fact-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .fact-badge {
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          align-self: flex-start;
+        }
+        .fact-badge.issue { background: rgba(239,68,68,0.12); color: var(--color-danger); }
+        .fact-badge.preference { background: rgba(91,94,244,0.12); color: var(--color-primary); }
+        .fact-badge.ticket { background: rgba(245,158,11,0.15); color: #b45309; }
+        .fact-badge.resolution { background: rgba(34,197,94,0.12); color: #15803d; }
+        .fact-badge.sentiment { background: rgba(239,68,68,0.08); color: #dc2626; }
+        .fact-badge.observation { background: rgba(168,85,247,0.12); color: #7e22ce; }
+        .fact-summary {
+          font-size: 12px;
+          color: var(--color-foreground);
+          line-height: 1.4;
+          margin: 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        /* Memory card grid */
+        .memory-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 16px;
+          padding: 4px 0;
+        }
+        .memory-card {
+          background: var(--color-card);
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--color-border);
+          padding: 14px 16px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: box-shadow 0.2s ease;
+        }
+        .memory-card:hover {
+          box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .memory-card-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        }
+        .memory-category-badge {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .memory-category-badge.issue { background: rgba(239,68,68,0.12); color: var(--color-danger); }
+        .memory-category-badge.preference { background: rgba(91,94,244,0.12); color: var(--color-primary); }
+        .memory-category-badge.ticket { background: rgba(245,158,11,0.15); color: #b45309; }
+        .memory-category-badge.resolution { background: rgba(34,197,94,0.12); color: #15803d; }
+        .memory-category-badge.sentiment { background: rgba(239,68,68,0.08); color: #dc2626; }
+        .memory-category-badge.observation { background: rgba(168,85,247,0.12); color: #7e22ce; }
+        .memory-card-text {
+          font-size: 13px;
+          color: var(--color-foreground);
+          line-height: 1.45;
+          display: -webkit-box;
+          -webkit-line-clamp: 4;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .memory-card-footer {
+          margin-top: 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11px;
+          color: var(--color-muted-foreground);
+        }
+        .memory-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.4);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+        }
+        .memory-modal {
+          background: var(--color-card);
+          border-radius: var(--radius-lg);
+          max-width: 600px;
+          width: 100%;
+          max-height: 80vh;
+          overflow-y: auto;
+          padding: 24px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        .memory-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+        .memory-modal-close {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 18px;
+          color: var(--color-muted-foreground);
+          border: none;
+          background: var(--color-input);
+        }
+        .memory-modal-close:hover {
+          background: var(--color-muted);
+        }
+        .memory-modal-content {
+          font-size: 14px;
+          line-height: 1.6;
+          color: var(--color-foreground);
+          white-space: pre-wrap;
+        }
       </style>
     </head>
     <body>
@@ -331,27 +481,21 @@
           <div class="mb-6 w-8 h-8 bg-primary rounded-md flex items-center justify-center">
             <span class="text-primary-foreground font-headings font-bold" style="font-size: 14px">M</span>
           </div>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground">
-            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="layout-dashboard"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Dashboard" onclick="window.location.href='./dashboard.html'">
+            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></g></svg></span>
           </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground">
-            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="inbox"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11"></path></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Live Sessions" onclick="window.location.href='./liveagent.html'">
+            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11"></path></g></svg></span>
           </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground">
-            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="users"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground" title="Memory Inspector" onclick="window.location.href='./memory_inspector.html'">
+            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></g></svg></span>
           </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground">
-            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="brain"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></g></svg></span>
-          </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground">
-            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="bar-chart-2"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="M5 21v-6m7 6V3m7 18V9"></path></svg></span>
-          </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground">
-            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="settings"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Customers" onclick="window.location.href='./customer_profile.html'">
+            <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></g></svg></span>
           </button>
           <div class="mt-auto">
-            <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground">
-              <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="log-out"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="m16 17l5-5l-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg></span>
+            <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Log out" onclick="var c=window.supabase?.createClient?.(window.CONFIG?.SUPABASE_URL||'',window.CONFIG?.SUPABASE_ANON_KEY||'');c?.auth?.signOut();window.location.href='./login.html'">
+              <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="m16 17l5-5l-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg></span>
             </button>
           </div>
         </div>
@@ -372,7 +516,7 @@
                 <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px;" data-icon="bell"><svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10.268 21a2 2 0 0 0 3.464 0m-10.47-5.674A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg></span>
                 <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
               </button>
-              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0" class="w-8 h-8 rounded-full" />
+              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0" class="w-8 h-8 rounded-full" alt="User avatar" />
             </div>
           </div>
 
@@ -384,12 +528,13 @@
               <div class="flex items-center gap-3">
                 <div class="flex-1 bg-card border border-border rounded-lg px-4 py-2.5 flex items-center gap-2 text-muted-foreground text-sm">
                   <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 14px; height: 14px;" data-icon="search"><svg xmlns="http://www.w3.org/2000/svg" width="14px" height="14px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.4285714285714284"><path d="m21 21l-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></g></svg></span>
-                  <span>Search customers or facts…</span>
+                  <input id="customer-search" type="text" placeholder="Search customers or facts…" style="background:none;border:none;outline:none;flex:1;color:var(--color-foreground);font-size:13px" />
                 </div>
-                <div class="flex gap-2">
-                  <button class="text-xs font-medium px-3 py-1.5 rounded-md border bg-danger text-danger-foreground border-danger">High frustration</button>
-                  <button class="text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border">Unresolved</button>
-                  <button class="text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border">New this week</button>
+                <div class="flex gap-2" id="filter-bar">
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border" data-filter="frustrated">High frustration</button>
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border" data-filter="unresolved">Unresolved</button>
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border" data-filter="recent">New this week</button>
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border hidden" data-filter="all" id="clear-filter" style="display:none">Clear</button>
                 </div>
               </div>
 
@@ -447,22 +592,61 @@
             </div>
 
             <!-- Right Sidebar -->
-            <div class="w-72 flex-shrink-0 p-6 pl-0 flex flex-col gap-4">
-              <!-- Quick Actions -->
+            <div class="w-80 flex-shrink-0 p-6 pl-0 flex flex-col gap-4 overflow-y-auto" style="max-height:calc(100vh - 56px)">
+              <!-- Customer Detail (hidden until a customer is selected) -->
+              <div id="customer-detail" class="hidden flex flex-col gap-4">
+                <div class="bg-card rounded-lg border border-border p-5">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div id="detail-avatar" style="width:40px;height:40px;border-radius:50%;background:var(--color-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0"></div>
+                    <div class="flex-1 min-w-0">
+                      <h2 id="detail-name" class="font-headings font-semibold text-base text-foreground truncate"></h2>
+                      <span id="detail-email" class="text-xs text-muted-foreground truncate block"></span>
+                    </div>
+                    <button id="close-detail" style="width:24px;height:24px;border:none;background:var(--color-input);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-muted-foreground);font-size:14px">&times;</button>
+                  </div>
+                  <div class="flex gap-2 mb-3">
+                    <span id="detail-frustration" class="text-xs font-semibold px-2 py-0.5 rounded-md"></span>
+                    <span id="detail-tickets" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground"></span>
+                    <span id="detail-memories" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground"></span>
+                  </div>
+                  <div id="detail-last-seen" class="text-xs text-muted-foreground"></div>
+                </div>
+
+                <!-- Memory type breakdown -->
+                <div class="bg-card rounded-lg border border-border p-5">
+                  <h3 class="font-headings font-semibold text-sm text-foreground mb-3">Memory breakdown</h3>
+                  <div id="memory-breakdown" class="flex flex-col gap-2"></div>
+                </div>
+
+                <!-- Memory timeline -->
+                <div class="bg-card rounded-lg border border-border p-5">
+                  <h3 class="font-headings font-semibold text-sm text-foreground mb-3">Recent memories</h3>
+                  <div id="memory-timeline" class="flex flex-col gap-2" style="max-height:300px;overflow-y:auto"></div>
+                </div>
+              </div>
+
+              <!-- Quick Actions (always visible) -->
               <div class="bg-card rounded-lg border border-border p-5">
                 <h2 class="font-headings font-semibold text-base text-foreground mb-3">Quick actions</h2>
                 <div class="flex flex-col gap-2">
-                  <button class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left">Run accuracy audit</button>
-                  <button class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left">Export memory snapshot</button>
-                  <button class="bg-danger text-danger-foreground text-sm font-medium px-4 py-2 rounded-md text-left">Clear low-confidence facts</button>
+                  <button id="btn-audit" class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left hover:bg-muted">Run accuracy audit</button>
+                  <button id="btn-export" class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left hover:bg-muted">Export memory snapshot</button>
+                  <button id="btn-clear" class="bg-danger text-danger-foreground text-sm font-medium px-4 py-2 rounded-md text-left hover:opacity-90">Clear low-confidence facts</button>
                 </div>
+              </div>
+
+              <!-- Audit results -->
+              <div id="audit-results" class="hidden bg-card rounded-lg border border-border p-5">
+                <h3 class="font-headings font-semibold text-sm text-foreground mb-3">Audit results</h3>
+                <div id="audit-body" class="text-xs text-muted-foreground"></div>
               </div>
             </div>
           </div>
         </div>
       </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49"></script>
+    <script type="module" src="./js/config.js"></script>
+    <script type="module" src="./js/memory_inspector.js"></script>
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
     </body>
   </html>
-      <script src="memory_inspector.js"></script>
-      <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
-</div>

@@ -117,7 +117,9 @@ class MyChatRequest(BaseModel):
 
 class MyChatResponse(BaseModel):
     reply: str
+    reply_id: str = ""
     suggested_solution: Optional[str] = None
+    agent_connected: bool = False
 
 
 class CreateCustomerRequest(BaseModel):

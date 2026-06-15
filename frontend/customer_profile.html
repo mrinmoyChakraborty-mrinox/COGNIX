@@ -1,21 +1,15 @@
-<div
-  class="export-wrapper"
-  style="
-    width: 1440px;
-    min-height: 812px;
-    position: relative;
-    font-family: var(--font-family-body);
-    background-color: var(--background);
-  "
->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
-  <html>
-    <head>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>COGNIX - Customer Profile</title>
       <style>
         /*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
         @layer properties;
@@ -626,27 +620,21 @@
           <div class="mb-6 w-8 h-8 bg-primary rounded-md flex items-center justify-center">
             <span class="text-primary-foreground font-headings font-bold" style="font-size: 14px">M</span>
           </div>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
-            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="layout-dashboard" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Dashboard" onclick="window.location.href='./dashboard.html'">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></g></svg></span>
           </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground" data-media-type="banani-button">
-            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="inbox" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11"></path></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Live Sessions" onclick="window.location.href='./liveagent.html'">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11"></path></g></svg></span>
           </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
-            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="users" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Memory Inspector" onclick="window.location.href='./memory_inspector.html'">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></g></svg></span>
           </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
-            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="brain" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></g></svg></span>
-          </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
-            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="bar-chart-2" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="M5 21v-6m7 6V3m7 18V9"></path></svg></span>
-          </button>
-          <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
-            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="settings" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></g></svg></span>
+          <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-primary-foreground" title="Customers" onclick="window.location.href='./customer_profile.html'">
+            <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></g></svg></span>
           </button>
           <div class="mt-auto">
-            <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" data-media-type="banani-button">
-              <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;" data-icon="log-out" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="m16 17l5-5l-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg></span>
+            <button class="w-10 h-10 rounded-lg flex items-center justify-center text-sidebar-foreground" title="Log out" onclick="var c=window.supabase?.createClient?.(window.CONFIG?.SUPABASE_URL||'',window.CONFIG?.SUPABASE_ANON_KEY||'');c?.auth?.signOut();window.location.href='./login.html'">
+              <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 18px; height: 18px;"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6666666666666665" d="m16 17l5-5l-5-5m5 5H9m0 9H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg></span>
             </button>
           </div>
         </div>
@@ -655,6 +643,10 @@
         <div class="flex flex-col flex-1 min-w-0">
           <!-- Top Bar -->
           <div class="h-14 bg-card border-b border-border flex items-center px-6 gap-4" data-component="@components/TopBar.jsx">
+            <button id="backBtn" class="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1" style="cursor:pointer;background:none;border:none;padding:4px 8px;border-radius:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18l-6-6l6-6"/></svg>
+              Back
+            </button>
             <span class="font-headings font-semibold text-lg text-foreground flex-shrink-0"><span data-file="/screens/CustomerProfile.jsx" data-idx="0">Customer Profile</span></span>
             <div class="flex-1 max-w-sm ml-4">
               <div class="bg-input rounded-md px-3 py-2 flex items-center gap-2 text-muted-foreground text-sm">
@@ -667,7 +659,7 @@
                 <span class="" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px;" data-icon="bell" data-component="@globalComponents/Icon.jsx"><svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10.268 21a2 2 0 0 0 3.464 0m-10.47-5.674A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg></span>
                 <span class="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full"></span>
               </button>
-              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0" class="w-8 h-8 rounded-full" data-component="@globalComponents/UserAvatar.jsx" />
+              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/North American/0" class="w-8 h-8 rounded-full" alt="User avatar" data-component="@globalComponents/UserAvatar.jsx" />
             </div>
           </div>
 
@@ -715,7 +707,7 @@
             <div class="skeleton-target hidden">
             <!-- Customer Header -->
             <div class="card-base flex items-center gap-5" style="padding: 20px 24px">
-              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1" class="w-14 h-14 rounded-full flex-shrink-0" data-component="@globalComponents/UserAvatar.jsx" />
+              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/1" class="w-14 h-14 rounded-full flex-shrink-0" alt="Customer avatar" data-component="@globalComponents/UserAvatar.jsx" />
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-3 mb-1">
                   <h1 id="customer-name" class="font-headings font-bold text-2xl text-foreground">Mrinmoy Chakraborty</h1>
@@ -739,6 +731,10 @@
                 </svg>
                 <span id="frustration-ring-value" class="ring-value">62</span>
               </div>
+              <button id="startSessionBtn" class="flex items-center gap-1.5 text-sm font-semibold" style="padding:8px 16px;border-radius:8px;background:var(--color-primary);color:var(--color-primary-foreground);border:none;cursor:pointer;white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9l-14 9V3z"/></svg>
+                Start Session
+              </button>
             </div>
 
             <!-- Two-Column Layout -->
@@ -976,8 +972,9 @@
           </div>
         </div>
       </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49"></script>
+    <script type="module" src="./js/config.js"></script>
+    <script type="module" src="./js/customer_profile.js"></script>
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
     </body>
   </html>
-      <script src="customer_profile.js"></script>
-      <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
-</div>

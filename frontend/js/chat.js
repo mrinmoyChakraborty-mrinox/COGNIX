@@ -1,8 +1,4 @@
-const ADMIN_EMAIL = "your-admin@email.com";
-const SUPABASE_URL = "https://ckjypqgnkovsdezsjjqo.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
-
-const API_BASE = "http://localhost:8000";
+const { ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE } = window.CONFIG;
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -10,7 +6,12 @@ let currentCustomer = null;
 let tickets = [];
 let activeTicketId = null;
 
+// Safe DOM helpers — no crash if element is missing
 function $(id) { return document.getElementById(id); }
+function show(id) { const e = $(id); if (e) e.classList.remove("hidden"); }
+function hide(id) { const e = $(id); if (e) e.classList.add("hidden"); }
+function attr(id, prop, val) { const e = $(id); if (e) e[prop] = val; }
+function text(id, val) { attr(id, "textContent", val); }
 
 function escapeHtml(str) {
   const d = document.createElement("div");
@@ -31,7 +32,7 @@ function now() {
 
 function scrollToBottom() {
   const el = $("chatMessages");
-  el.scrollTop = el.scrollHeight;
+  if (el) el.scrollTop = el.scrollHeight;
 }
 
 async function getToken() {
@@ -47,12 +48,56 @@ async function apiFetch(path, opts = {}) {
   return res;
 }
 
+async function showFailure(profileStatus, profileBody, setupStatus, setupBody) {
+  const el = $("errorDetail");
+  if (!el) return;
+  const lines = [
+    `GET /my/profile → ${profileStatus}`,
+    `  body: ${profileBody}`,
+    `POST /my/setup-profile → ${setupStatus}`,
+    `  body: ${setupBody}`,
+    `API_BASE: ${API_BASE}`,
+  ];
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    lines.push(`session.active: ${!!session?.access_token}`);
+    if (session?.access_token) {
+      lines.push(`token.prefix: ${session.access_token.substring(0, 12)}...`);
+    }
+  } catch (_) {
+    lines.push("session: error reading");
+  }
+
+  lines.push("");
+  el.textContent = lines.join("\n");
+}
+
 async function loadProfile() {
-  const res = await apiFetch("/my/profile");
-  if (res.status === 404) {
-    $("chatLayout").classList.add("hidden");
-    $("errorScreen").classList.remove("hidden");
-    return null;
+  let res = await apiFetch("/my/profile");
+  if (!res.ok) {
+    let profileBody = "?";
+    try { profileBody = JSON.stringify(await res.json()); } catch (_) { profileBody = await res.text().catch(() => "?"); }
+
+    const setupRes = await apiFetch("/my/setup-profile", { method: "POST" });
+    let setupBody = "?";
+    try { setupBody = JSON.stringify(await setupRes.json()); } catch (_) { setupBody = await setupRes.text().catch(() => "?"); }
+
+    console.error("loadProfile failed", {
+      profileStatus: res.status,
+      profileBody,
+      setupStatus: setupRes.status,
+      setupBody,
+    });
+
+    if (setupRes.ok) {
+      res = await apiFetch("/my/profile");
+    } else {
+      showFailure(res.status, profileBody, setupRes.status, setupBody);
+      hide("chatLayout");
+      show("errorScreen");
+      return null;
+    }
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -67,11 +112,11 @@ async function loadTickets() {
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return;
   }
   if (session.user.email === ADMIN_EMAIL) {
-    window.location.href = "/frontend/dashboard.html";
+    window.location.href = "./dashboard.html";
     return;
   }
 
@@ -80,6 +125,17 @@ async function init() {
     if (!currentCustomer) return;
 
     tickets = await loadTickets() || [];
+
+    if (tickets.length === 0) {
+      const res = await apiFetch("/my/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: "General Support" }),
+      });
+      if (res.ok) {
+        tickets = await loadTickets() || [];
+      }
+    }
 
     renderPortalHeader(currentCustomer);
     renderTickets(tickets);
@@ -91,19 +147,28 @@ async function init() {
       selectTicket(tickets[0]);
     }
 
-    $("chatLayout").classList.remove("hidden");
+    show("chatLayout");
 
   } catch (err) {
     console.error("Init failed:", err);
-    $("chatLayout").classList.add("hidden");
-    $("errorScreen").classList.remove("hidden");
+    const detail = $("errorDetail");
+    if (detail) {
+      detail.textContent = [
+        `Error: ${err.message || err}`,
+        ``,
+        `Check browser console (F12) for the full stack trace.`,
+        `API_BASE: ${API_BASE}`,
+      ].join("\n");
+    }
+    hide("chatLayout");
+    show("errorScreen");
   }
 }
 
 function renderPortalHeader(customer) {
   const name = customer.name || customer.email?.split("@")[0] || "Customer";
-  $("greetingName").textContent = name;
-  $("avatarImg").src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5b5ef4&color=fff`;
+  text("greetingName", name);
+  attr("avatarImg", "src", `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5b5ef4&color=fff`);
 }
 
 function getCustomerName() {
@@ -117,15 +182,16 @@ function getUserAvatarHtml() {
 
 function renderTickets(list) {
   const container = $("ticketDropdownList");
+  if (!container) return;
   const empty = $("ticketDropdownEmpty");
   container.innerHTML = "";
 
   if (!list || list.length === 0) {
-    empty?.classList.remove("hidden");
+    if (empty) empty.classList.remove("hidden");
     return;
   }
 
-  empty?.classList.add("hidden");
+  if (empty) empty.classList.add("hidden");
 
   for (const t of list) {
     const row = document.createElement("div");
@@ -142,7 +208,7 @@ function renderTickets(list) {
 
     row.addEventListener("click", () => {
       selectTicket(t);
-      $("ticketDropdown")?.classList.add("hidden");
+      hide("ticketDropdown");
     });
 
     container.appendChild(row);
@@ -152,24 +218,33 @@ function renderTickets(list) {
 function selectTicket(ticket) {
   activeTicketId = ticket.id;
 
-  $("ticketBarSubject").textContent = ticket.subject;
+  text("ticketBarSubject", ticket.subject);
+
   const statusEl = $("ticketBarStatus");
-  statusEl.textContent = ticket.status;
-  statusEl.style.background = ticket.status === "resolved" ? "#dcfce7" : "#fef3c7";
-  statusEl.style.color = ticket.status === "resolved" ? "#166534" : "#92400e";
+  if (statusEl) {
+    statusEl.textContent = ticket.status;
+    statusEl.style.background = ticket.status === "resolved" ? "#dcfce7" : "#fef3c7";
+    statusEl.style.color = ticket.status === "resolved" ? "#166534" : "#92400e";
+  }
 
   const container = $("chatMessages");
+  if (!container) return;
+
+  // Save references to elements that would be destroyed by innerHTML = ""
+  const savedTypingRow = $("typingRow");
+
   container.innerHTML = "";
   const welcome = $("welcomeBanner");
-  welcome.classList.remove("hidden");
-  welcome.innerHTML = `<h2>${escapeHtml(ticket.subject)}</h2><p>${ticket.status === "resolved" ? "This ticket has been resolved." : "Open ticket — type a message below."}</p>`;
-  container.appendChild(welcome);
+  if (welcome) {
+    welcome.classList.remove("hidden");
+    welcome.innerHTML = `<h2>${escapeHtml(ticket.subject)}</h2><p>${ticket.status === "resolved" ? "This ticket has been resolved." : "Open ticket — type a message below."}</p>`;
+    container.appendChild(welcome);
+  }
 
-  const typingRow = $("typingRow");
-  if (typingRow) container.appendChild(typingRow);
+  // Re-insert typingRow — still a live reference even after innerHTML = ""
+  if (savedTypingRow) container.appendChild(savedTypingRow);
 
-  const dropdown = $("ticketDropdown");
-  if (dropdown) dropdown.classList.add("hidden");
+  hide("ticketDropdown");
 
   document.querySelectorAll(".ticket-dropdown-row").forEach(el => {
     el.classList.toggle("active", el.dataset.ticketId === ticket.id);
@@ -180,42 +255,46 @@ function selectTicket(ticket) {
 
 function updateSessionSummary(ticket) {
   const summary = $("sessionSummary");
-  const text = $("summaryText");
+  const summaryText = $("summaryText");
   const badge = $("sessionStatusBadge");
   const num = $("ticketNum");
 
   if (!ticket) {
-    summary?.classList.add("hidden");
+    if (summary) summary.classList.add("hidden");
     return;
   }
 
-  summary?.classList.remove("hidden");
-  if (text) text.textContent = ticket.subject;
+  if (summary) summary.classList.remove("hidden");
+  if (summaryText) summaryText.textContent = ticket.subject;
   if (badge) badge.textContent = ticket.status;
   if (num) num.textContent = `#${ticket.id?.toString().slice(-4) || "---"}`;
 }
 
 function openModal() {
-  $("ticketModal").classList.remove("hidden");
-  $("ticketSubject").value = "";
-  $("ticketSubjectError").classList.add("hidden");
-  $("ticketSubject").focus();
+  show("ticketModal");
+  attr("ticketSubject", "value", "");
+  hide("ticketSubjectError");
+  const input = $("ticketSubject");
+  if (input) input.focus();
 }
 
 function closeModal() {
-  $("ticketModal").classList.add("hidden");
+  hide("ticketModal");
 }
 
 async function handleTicketSubmit() {
-  const subject = $("ticketSubject").value.trim();
+  const input = $("ticketSubject");
+  if (!input) return;
+  const subject = input.value.trim();
   if (!subject) {
-    $("ticketSubjectError").classList.remove("hidden");
-    $("ticketSubjectError").textContent = "Please enter a subject";
+    text("ticketSubjectError", "Please enter a subject");
+    show("ticketSubjectError");
     return;
   }
-  $("ticketSubjectError").classList.add("hidden");
+  hide("ticketSubjectError");
 
   const submitBtn = $("modalSubmitBtn");
+  if (!submitBtn) return;
   submitBtn.disabled = true;
   submitBtn.textContent = "Creating...";
 
@@ -238,8 +317,8 @@ async function handleTicketSubmit() {
     closeModal();
     showToast("Ticket created");
   } catch (err) {
-    $("ticketSubjectError").textContent = "Failed to create ticket";
-    $("ticketSubjectError").classList.remove("hidden");
+    text("ticketSubjectError", "Failed to create ticket");
+    show("ticketSubjectError");
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "Create Ticket";
@@ -287,6 +366,7 @@ function appendMessage(role, text) {
 
   const typingRow = $("typingRow");
   const container = $("chatMessages");
+  if (!container) return;
   if (typingRow) {
     container.insertBefore(row, typingRow);
   } else {
@@ -315,6 +395,29 @@ function hideError() {
   if (banner) banner.classList.add("hidden");
 }
 
+let _agentConnected = false;
+let _pendingPollTimer = null;
+
+let _seenReplyIds = new Set();
+
+function startPendingPoll() {
+  if (_pendingPollTimer) clearInterval(_pendingPollTimer);
+  _pendingPollTimer = setInterval(async () => {
+    try {
+      const res = await apiFetch("/my/pending-replies");
+      if (res.ok) {
+        const data = await res.json();
+        for (const reply of data.replies || []) {
+          const rid = reply.reply_id || "no_id";
+          console.log(`[DIAG] render source=poll reply_id=${rid} text=%.200s`, reply.text);
+          appendMessage("assistant", reply.text);
+        }
+        _agentConnected = !data.agent_disconnected;
+      }
+    } catch (_) {}
+  }, 3000);
+}
+
 async function sendMessage() {
   const input = $("msgInput");
   const text = input?.value.trim();
@@ -322,8 +425,10 @@ async function sendMessage() {
 
   hideError();
   appendMessage("user", text);
-  input.value = "";
-  input.focus();
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
   showTypingIndicator(true);
 
   try {
@@ -340,7 +445,17 @@ async function sendMessage() {
 
     const data = await res.json();
     showTypingIndicator(false);
-    appendMessage("assistant", data.reply);
+
+    if (data.reply) {
+      const rid = data.reply_id || "no_id";
+      console.log(`[DIAG] render source=chat_response reply_id=${rid} text=%.200s`, data.reply);
+      appendMessage("assistant", data.reply);
+    }
+
+    if (data.agent_connected) {
+      _agentConnected = true;
+      startPendingPoll();
+    }
   } catch (err) {
     showTypingIndicator(false);
     showError(err.message || "Could not reach support. Please try again.");
@@ -364,7 +479,8 @@ $("newTicketBtn")?.addEventListener("click", (e) => {
 
 $("ticketSelector")?.addEventListener("click", (e) => {
   e.stopPropagation();
-  $("ticketDropdown")?.classList.toggle("hidden");
+  const dd = $("ticketDropdown");
+  if (dd) dd.classList.toggle("hidden");
 });
 
 document.addEventListener("click", (e) => {
@@ -389,7 +505,7 @@ $("ticketSubject")?.addEventListener("keydown", (e) => {
 
 $("logoutBtn")?.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
-  window.location.href = "/frontend/login.html";
+  window.location.href = "./login.html";
 });
 
 $("closeBanner")?.addEventListener("click", () => {

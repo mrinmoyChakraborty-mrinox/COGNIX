@@ -1,9 +1,4 @@
-const ADMIN_EMAIL = "your-admin@email.com";
-
-const SUPABASE_URL = "https://ckjypqgnkovsdezsjjqo.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNranlwcWdua292c2RlenNqanFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNDI2MjQsImV4cCI6MjA5NjkxODYyNH0.mCDrIQ5ftcqzSG6oACy-UCdfPR2-virzU_udRuRDXwM";
-
-const API_BASE = "http://localhost:8000";
+const { ADMIN_EMAIL, SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE } = window.CONFIG;
 const QUEUE_LIMIT = 8;
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -52,7 +47,7 @@ async function apiFetch(path) {
   const res = await fetch(`${API_BASE}${path}`, { headers });
   if (res.status === 401) {
     await supabaseClient.auth.signOut();
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return null;
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -93,10 +88,10 @@ function renderQueue(customers, ticketsByCust) {
     card.className = `ticket-card${isHigh ? " priority" : ""}`;
 
     card.innerHTML = `
-      <div class="ticket-avatar-initials" style="background-color:${color}20;color:${color};font-weight:600;font-size:16px">${initials}</div>
+      <div class="ticket-avatar-initials" data-profile-id="${esc(c.id)}" style="cursor:pointer;background-color:${color}20;color:${color};font-weight:600;font-size:16px">${initials}</div>
       <div class="ticket-body">
         <div class="ticket-header">
-          <span class="ticket-name">${esc(c.name)}</span>
+          <span class="ticket-name" data-profile-id="${esc(c.id)}" style="cursor:pointer">${esc(c.name)}</span>
           <span class="ticket-wait">${timeAgo(c.created_at)}</span>
         </div>
         <p class="ticket-desc">${latest ? esc(latest.subject) : "No recent tickets"}</p>
@@ -117,6 +112,7 @@ function renderQueue(customers, ticketsByCust) {
         <div class="ticket-action-btns">
           ${latestId && open.length > 0 ? `<button class="resolve-btn" data-ticket-id="${esc(latestId)}">Resolve</button>` : ""}
           <button class="start-session-btn" data-customer-id="${esc(c.id)}">Start session</button>
+          <button class="view-profile-btn" data-customer-id="${esc(c.id)}">Profile</button>
         </div>
       </div>
     `;
@@ -128,7 +124,7 @@ function renderQueue(customers, ticketsByCust) {
   list.querySelectorAll(".start-session-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const cid = btn.dataset.customerId;
-      window.location.href = `/frontend/liveagent.html?customer_id=${cid}`;
+      window.location.href = `./liveagent.html?customer_id=${cid}`;
     });
   });
 
@@ -155,6 +151,18 @@ function renderQueue(customers, ticketsByCust) {
         btn.textContent = "Resolve";
       }
     });
+  });
+
+  // Wire profile navigation
+  const navToProfile = (cid) => window.location.href = `./customer_profile.html?customer_id=${cid}`;
+
+  list.querySelectorAll("[data-profile-id]").forEach((el) => {
+    el.addEventListener("click", () => navToProfile(el.dataset.profileId));
+  });
+
+  // Wire profile buttons
+  list.querySelectorAll(".view-profile-btn").forEach((btn) => {
+    btn.addEventListener("click", () => navToProfile(btn.dataset.customerId));
   });
 }
 
@@ -205,7 +213,6 @@ async function loadQueue() {
     if (!customers) return;
 
     const sorted = customers
-      .filter((c) => c.ticket_count > 0)
       .sort((a, b) => b.frustration_score - a.frustration_score)
       .slice(0, QUEUE_LIMIT);
 
@@ -292,12 +299,12 @@ async function loadTrending() {
 async function loadUser() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
-    window.location.href = "/frontend/login.html";
+    window.location.href = "./login.html";
     return;
   }
 
   if (session.user.email !== ADMIN_EMAIL) {
-    window.location.href = "/frontend/chat.html";
+    window.location.href = "./chat.html";
     return;
   }
 
@@ -313,12 +320,16 @@ async function loadUser() {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}`;
 
   $("welcomeText").innerText = `Good morning, ${fullName}`;
-  $("avatarWrapper").innerHTML = `<img src="${avatar}" class="avatar" alt="${fullName}">`;
+  const img = document.createElement("img");
+  img.src = avatar;
+  img.className = "avatar";
+  img.alt = fullName;
+  $("avatarWrapper").appendChild(img);
 }
 
 async function logout() {
   await supabaseClient.auth.signOut();
-  window.location.href = "/frontend/login.html";
+  window.location.href = "./login.html";
 }
 
 // ── Init ───────────────────────────────────────────────────
