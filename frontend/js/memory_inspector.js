@@ -4,7 +4,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 (async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session || session.user.email !== ADMIN_EMAIL) {
+  if (!session) {
+    window.location.href = "./login.html";
+    return;
+  }
+  if (session.user.email !== ADMIN_EMAIL) {
     window.location.href = "./chat.html";
     return;
   }
@@ -27,6 +31,18 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     .forEach(el => el.style.display = 'none');
   document.querySelectorAll('.skeleton-target')
     .forEach(el => el.style.display = '');
+
+  // Verify backend role — redirect if not admin
+  try {
+    const me = await fetchJSON('/debug/me');
+    console.log("debug/me", me);
+    if (!me.user || me.user.role !== 'admin') {
+      window.location.href = './chat.html';
+      return;
+    }
+  } catch (e) {
+    console.error("/debug/me failed — auth may be broken", e);
+  }
 
   try {
     const customers = await fetchJSON('/customers');
@@ -167,20 +183,14 @@ function renderFacts(memories) {
     memory: m,
     summary: window.formatMemory(m),
     category: window.categorizeMemory(m),
-    border: m.memory_type === 'experience' ? 'border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);' : m.memory_type === 'observation' ? 'border-color: color-mix(in srgb, var(--color-success) 30%, transparent);' : '',
+    border: m.memory_type === 'experience' ? 'border-left:3px solid var(--color-warning);' : m.memory_type === 'observation' ? 'border-left:3px solid var(--color-success);' : '',
   }));
   return `
-    <div class="memory-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+    <div class="facts-carousel">
       ${items.map(({ memory: m, summary, category, border }) => `
-        <div class="memory-card" style="${border}" data-memory-content="${escapeHtml(m.content)}" data-memory-category="${category}" data-memory-type="${escapeHtml(m.memory_type)}" data-memory-context="${escapeHtml(m.context || '')}">
-          <div class="memory-card-header">
-            <span class="memory-category-badge" style="${CATEGORY_COLORS[category.toLowerCase()] || ''}">${category}</span>
-            <span class="text-xs text-muted-foreground">${escapeHtml(m.memory_type)}</span>
-          </div>
-          <div class="memory-card-text">${escapeHtml(summary)}</div>
-          <div class="memory-card-footer">
-            <span>${escapeHtml(m.context || '')}</span>
-          </div>
+        <div class="fact-card" style="${border}" data-memory-content="${escapeHtml(m.content)}" data-memory-category="${category}" data-memory-type="${escapeHtml(m.memory_type)}" data-memory-context="${escapeHtml(m.context || '')}">
+          <span class="fact-badge ${category.toLowerCase()}">${category}</span>
+          <p class="fact-summary">${escapeHtml(summary)}</p>
         </div>
       `).join('')}
     </div>
@@ -211,9 +221,13 @@ function showEmpty(msg) {
 
 async function fetchJSON(path) {
   const { data: { session } } = await supabaseClient.auth.getSession();
+  const token = session?.access_token || null;
+  console.log("token", token ? token.substring(0, 20) + "..." : "MISSING");
+  const url = `${API_BASE}${path}`;
+  console.log("customer fetch", url);
   const headers = { "Accept": "application/json" };
-  if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
-  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${path}`);
   return res.json();
 }

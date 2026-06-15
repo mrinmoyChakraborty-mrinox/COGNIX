@@ -280,12 +280,14 @@ function buildMemoryGraph(hits) {
 
 function renderMemoryViz(msg) {
   if (!memoryPanel) return;
+  console.log("memory.update payload", msg);
   if (memoryPanel._scanInterval) {
     clearInterval(memoryPanel._scanInterval);
     delete memoryPanel._scanInterval;
   }
 
   const hits = msg.hits || [];
+  console.log("hits.length", hits.length);
   const TYPE_LABELS = { world_fact: "Fact", experience: "Experience", observation: "Observation" };
   const TYPE_CLASSES = { world_fact: "world_fact", experience: "experience", observation: "observation" };
   const query = escapeHtml(msg.query || "");
@@ -657,26 +659,9 @@ async function loadSidebarFacts() {
       : (m.content || '').substring(0, 80);
 
     list.innerHTML = memories.slice(0, 8).map(m => `
-      <div style="display:flex;align-items:flex-start;gap:8px;
-                  padding:5px 0;border-bottom:1px solid 
-                  var(--color-border)">
-        <span style="flex-shrink:0;width:7px;height:7px;
-                     border-radius:50%;margin-top:5px;
-                     background:${TYPE_COLORS[m.memory_type] 
-                       || '#6366f1'}"></span>
-        <div style="flex:1;min-width:0">
-          <p style="font-size:12px;color:var(--color-foreground);
-                    margin:0 0 2px;line-height:1.4;
-                    word-break:break-word">
-            ${escapeHtml(fmt(m))}
-          </p>
-          <span style="font-size:10px;
-                       color:var(--color-muted-foreground)">
-            ${TYPE_LABELS[m.memory_type] || 'Memory'}
-            ${m.context && m.context !== 'stored' 
-              ? ' · ' + escapeHtml(m.context) : ''}
-          </span>
-        </div>
+      <div class="fact-card" style="border-left:3px solid ${TYPE_COLORS[m.memory_type] || '#6366f1'}">
+        <span class="memory-category-badge" style="background:${TYPE_COLORS[m.memory_type] || '#6366f1'}22;color:${TYPE_COLORS[m.memory_type] || '#6366f1'}">${TYPE_LABELS[m.memory_type] || 'Memory'}</span>
+        <p class="fact-text">${escapeHtml(fmt(m))}</p>
       </div>
     `).join('');
 
