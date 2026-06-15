@@ -205,7 +205,7 @@ async def retrieve_memories(
                     id=str(uuid4()),
                     customer_id=customer_id,
                     content=m.text,
-                    context=getattr(m, "context", "recalled"),
+                    context=getattr(m, "context", None) or "recalled",
                     memory_type=_map_memory_type(getattr(m, "type", "world_fact")),
                     created_at=datetime.now(timezone.utc),
                 )

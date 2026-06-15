@@ -200,7 +200,6 @@ async function loadQueue() {
     if (!customers) return;
 
     const sorted = customers
-      .filter((c) => c.ticket_count > 0)
       .sort((a, b) => b.frustration_score - a.frustration_score)
       .slice(0, QUEUE_LIMIT);
 

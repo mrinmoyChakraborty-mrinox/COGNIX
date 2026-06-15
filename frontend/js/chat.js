@@ -84,6 +84,19 @@ async function init() {
 
     tickets = await loadTickets() || [];
 
+    // Auto-create General Support ticket if customer has none
+    if (tickets.length === 0) {
+      const res = await apiFetch("/my/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject: "General Support" }),
+      });
+      if (res.ok) {
+        const ticket = await res.json();
+        tickets = [ticket];
+      }
+    }
+
     renderPortalHeader(currentCustomer);
     renderTickets(tickets);
 
