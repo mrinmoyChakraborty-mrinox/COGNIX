@@ -6,7 +6,12 @@ let currentCustomer = null;
 let tickets = [];
 let activeTicketId = null;
 
+// Safe DOM helpers — no crash if element is missing
 function $(id) { return document.getElementById(id); }
+function show(id) { const e = $(id); if (e) e.classList.remove("hidden"); }
+function hide(id) { const e = $(id); if (e) e.classList.add("hidden"); }
+function attr(id, prop, val) { const e = $(id); if (e) e[prop] = val; }
+function text(id, val) { attr(id, "textContent", val); }
 
 function escapeHtml(str) {
   const d = document.createElement("div");
@@ -27,7 +32,7 @@ function now() {
 
 function scrollToBottom() {
   const el = $("chatMessages");
-  el.scrollTop = el.scrollHeight;
+  if (el) el.scrollTop = el.scrollHeight;
 }
 
 async function getToken() {
@@ -64,7 +69,7 @@ async function showFailure(profileStatus, profileBody, setupStatus, setupBody) {
     lines.push("session: error reading");
   }
 
-  lines.push(""); // trailing blank
+  lines.push("");
   el.textContent = lines.join("\n");
 }
 
@@ -89,8 +94,8 @@ async function loadProfile() {
       res = await apiFetch("/my/profile");
     } else {
       showFailure(res.status, profileBody, setupRes.status, setupBody);
-      $("chatLayout").classList.add("hidden");
-      $("errorScreen").classList.remove("hidden");
+      hide("chatLayout");
+      show("errorScreen");
       return null;
     }
   }
@@ -121,7 +126,6 @@ async function init() {
 
     tickets = await loadTickets() || [];
 
-    // Auto-create General Support ticket if customer has none
     if (tickets.length === 0) {
       const res = await apiFetch("/my/tickets", {
         method: "POST",
@@ -143,21 +147,28 @@ async function init() {
       selectTicket(tickets[0]);
     }
 
-    $("chatLayout").classList.remove("hidden");
+    show("chatLayout");
 
   } catch (err) {
     console.error("Init failed:", err);
-    const el = $("errorDetail");
-    if (el) el.textContent = `Error: ${err.message || err}\n\nCheck the browser console (F12) for full details.`;
-    $("chatLayout").classList.add("hidden");
-    $("errorScreen").classList.remove("hidden");
+    const detail = $("errorDetail");
+    if (detail) {
+      detail.textContent = [
+        `Error: ${err.message || err}`,
+        ``,
+        `Check browser console (F12) for the full stack trace.`,
+        `API_BASE: ${API_BASE}`,
+      ].join("\n");
+    }
+    hide("chatLayout");
+    show("errorScreen");
   }
 }
 
 function renderPortalHeader(customer) {
   const name = customer.name || customer.email?.split("@")[0] || "Customer";
-  $("greetingName").textContent = name;
-  $("avatarImg").src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5b5ef4&color=fff`;
+  text("greetingName", name);
+  attr("avatarImg", "src", `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=5b5ef4&color=fff`);
 }
 
 function getCustomerName() {
@@ -171,15 +182,16 @@ function getUserAvatarHtml() {
 
 function renderTickets(list) {
   const container = $("ticketDropdownList");
+  if (!container) return;
   const empty = $("ticketDropdownEmpty");
   container.innerHTML = "";
 
   if (!list || list.length === 0) {
-    empty?.classList.remove("hidden");
+    if (empty) empty.classList.remove("hidden");
     return;
   }
 
-  empty?.classList.add("hidden");
+  if (empty) empty.classList.add("hidden");
 
   for (const t of list) {
     const row = document.createElement("div");
@@ -196,7 +208,7 @@ function renderTickets(list) {
 
     row.addEventListener("click", () => {
       selectTicket(t);
-      $("ticketDropdown")?.classList.add("hidden");
+      hide("ticketDropdown");
     });
 
     container.appendChild(row);
@@ -206,24 +218,30 @@ function renderTickets(list) {
 function selectTicket(ticket) {
   activeTicketId = ticket.id;
 
-  $("ticketBarSubject").textContent = ticket.subject;
+  text("ticketBarSubject", ticket.subject);
+
   const statusEl = $("ticketBarStatus");
-  statusEl.textContent = ticket.status;
-  statusEl.style.background = ticket.status === "resolved" ? "#dcfce7" : "#fef3c7";
-  statusEl.style.color = ticket.status === "resolved" ? "#166534" : "#92400e";
+  if (statusEl) {
+    statusEl.textContent = ticket.status;
+    statusEl.style.background = ticket.status === "resolved" ? "#dcfce7" : "#fef3c7";
+    statusEl.style.color = ticket.status === "resolved" ? "#166534" : "#92400e";
+  }
 
   const container = $("chatMessages");
+  if (!container) return;
+
   container.innerHTML = "";
   const welcome = $("welcomeBanner");
-  welcome.classList.remove("hidden");
-  welcome.innerHTML = `<h2>${escapeHtml(ticket.subject)}</h2><p>${ticket.status === "resolved" ? "This ticket has been resolved." : "Open ticket — type a message below."}</p>`;
-  container.appendChild(welcome);
+  if (welcome) {
+    welcome.classList.remove("hidden");
+    welcome.innerHTML = `<h2>${escapeHtml(ticket.subject)}</h2><p>${ticket.status === "resolved" ? "This ticket has been resolved." : "Open ticket — type a message below."}</p>`;
+    container.appendChild(welcome);
+  }
 
   const typingRow = $("typingRow");
   if (typingRow) container.appendChild(typingRow);
 
-  const dropdown = $("ticketDropdown");
-  if (dropdown) dropdown.classList.add("hidden");
+  hide("ticketDropdown");
 
   document.querySelectorAll(".ticket-dropdown-row").forEach(el => {
     el.classList.toggle("active", el.dataset.ticketId === ticket.id);
@@ -234,42 +252,46 @@ function selectTicket(ticket) {
 
 function updateSessionSummary(ticket) {
   const summary = $("sessionSummary");
-  const text = $("summaryText");
+  const summaryText = $("summaryText");
   const badge = $("sessionStatusBadge");
   const num = $("ticketNum");
 
   if (!ticket) {
-    summary?.classList.add("hidden");
+    if (summary) summary.classList.add("hidden");
     return;
   }
 
-  summary?.classList.remove("hidden");
-  if (text) text.textContent = ticket.subject;
+  if (summary) summary.classList.remove("hidden");
+  if (summaryText) summaryText.textContent = ticket.subject;
   if (badge) badge.textContent = ticket.status;
   if (num) num.textContent = `#${ticket.id?.toString().slice(-4) || "---"}`;
 }
 
 function openModal() {
-  $("ticketModal").classList.remove("hidden");
-  $("ticketSubject").value = "";
-  $("ticketSubjectError").classList.add("hidden");
-  $("ticketSubject").focus();
+  show("ticketModal");
+  attr("ticketSubject", "value", "");
+  hide("ticketSubjectError");
+  const input = $("ticketSubject");
+  if (input) input.focus();
 }
 
 function closeModal() {
-  $("ticketModal").classList.add("hidden");
+  hide("ticketModal");
 }
 
 async function handleTicketSubmit() {
-  const subject = $("ticketSubject").value.trim();
+  const input = $("ticketSubject");
+  if (!input) return;
+  const subject = input.value.trim();
   if (!subject) {
-    $("ticketSubjectError").classList.remove("hidden");
-    $("ticketSubjectError").textContent = "Please enter a subject";
+    text("ticketSubjectError", "Please enter a subject");
+    show("ticketSubjectError");
     return;
   }
-  $("ticketSubjectError").classList.add("hidden");
+  hide("ticketSubjectError");
 
   const submitBtn = $("modalSubmitBtn");
+  if (!submitBtn) return;
   submitBtn.disabled = true;
   submitBtn.textContent = "Creating...";
 
@@ -292,8 +314,8 @@ async function handleTicketSubmit() {
     closeModal();
     showToast("Ticket created");
   } catch (err) {
-    $("ticketSubjectError").textContent = "Failed to create ticket";
-    $("ticketSubjectError").classList.remove("hidden");
+    text("ticketSubjectError", "Failed to create ticket");
+    show("ticketSubjectError");
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "Create Ticket";
@@ -341,6 +363,7 @@ function appendMessage(role, text) {
 
   const typingRow = $("typingRow");
   const container = $("chatMessages");
+  if (!container) return;
   if (typingRow) {
     container.insertBefore(row, typingRow);
   } else {
@@ -376,8 +399,10 @@ async function sendMessage() {
 
   hideError();
   appendMessage("user", text);
-  input.value = "";
-  input.focus();
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
   showTypingIndicator(true);
 
   try {
@@ -418,7 +443,8 @@ $("newTicketBtn")?.addEventListener("click", (e) => {
 
 $("ticketSelector")?.addEventListener("click", (e) => {
   e.stopPropagation();
-  $("ticketDropdown")?.classList.toggle("hidden");
+  const dd = $("ticketDropdown");
+  if (dd) dd.classList.toggle("hidden");
 });
 
 document.addEventListener("click", (e) => {
