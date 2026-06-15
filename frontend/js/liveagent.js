@@ -504,6 +504,7 @@ function hideSuggestedReply() {
 
 function sendAgentReplyText(text) {
   if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+  appendMessage("agent", text);
   hideSuggestedReply();
   socket.send(JSON.stringify({ type: "agent_reply", text }));
 }

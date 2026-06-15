@@ -868,13 +868,9 @@ async def websocket_session(
                     customer_id,
                     len(sessions._pending_replies.get(customer_id, [])),
                 )
-                await websocket.send_json(
-                    {
-                        "event": "agent_reply_sent",
-                        "data": message_text,
-                        "reply_id": reply_id,
-                    }
-                )
+                # No echo — the optimistic render in sendAgentReplyText handles it.
+                # agent_reply_sent is only sent on reconnect (orphan flush below)
+                # to replay replies the agent missed while disconnected.
                 continue
 
             # ── Customer message: run full AI pipeline ───────
