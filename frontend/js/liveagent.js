@@ -302,6 +302,7 @@ async function initProfile() {
   const nameEl  = document.getElementById("customerName");
   const emailEl = document.getElementById("customerEmail");
   const avatarEl = document.getElementById("customerAvatar");
+  const profileLinkEl = document.getElementById("profileLink");
   const scoreEl  = document.getElementById("profileFrustrationScore");
   const circleEl = document.getElementById("frustrationCircle");
 
@@ -318,6 +319,18 @@ async function initProfile() {
   if (emailEl) emailEl.textContent = customer.email;
   if (avatarEl && !avatarEl.src.includes("ui-avatars")) {
     avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(customer.name)}`;
+  }
+
+  // Wire profile navigation
+  const profileUrl = `./customer_profile.html?customer_id=${CUSTOMER_ID}`;
+  if (profileLinkEl) profileLinkEl.href = profileUrl;
+  if (nameEl) {
+    nameEl.style.cursor = "pointer";
+    nameEl.addEventListener("click", () => { window.location.href = profileUrl; });
+  }
+  if (avatarEl) {
+    avatarEl.style.cursor = "pointer";
+    avatarEl.addEventListener("click", () => { window.location.href = profileUrl; });
   }
 
   const score = customer.frustration_score || 0;

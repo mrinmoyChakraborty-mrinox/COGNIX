@@ -50,13 +50,13 @@ function renderTable(customers) {
       <div>
         <input type="checkbox" id="expand-${c.id}" class="expand-toggle" />
         <label for="expand-${c.id}" class="expand-label">
-          <div class="grid px-4 py-3.5 border-b border-border items-center${factCount ? ' bg-secondary' : ''}" style="grid-template-columns: 2fr 80px 100px 120px 100px">
+          <div class="grid px-4 py-3.5 border-b border-border items-center${factCount ? ' bg-secondary' : ''}" style="grid-template-columns: 2fr 80px 100px 120px 100px 110px">
             <div class="flex items-center gap-3">
               <span class="expand-icon" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px; color: var(--color-muted-foreground); margin-right: 4px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m6 9l6 6l6-6"></path></svg>
               </span>
-              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/${Math.floor(Math.random() * 5)}" class="w-8 h-8 rounded-full" />
-              <span class="text-sm font-medium text-foreground">${escapeHtml(c.name)}</span>
+              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/${Math.floor(Math.random() * 5)}" class="w-8 h-8 rounded-full memory-avatar" data-customer-id="${escapeHtml(c.id)}" style="cursor:pointer" />
+              <span class="text-sm font-medium text-foreground memory-name" data-customer-id="${escapeHtml(c.id)}" style="cursor:pointer">${escapeHtml(c.name)}</span>
             </div>
             <span class="text-xs font-semibold px-2 py-0.5 rounded-md ${c.frustration_score > 60 ? 'bg-warning text-warning-foreground' : c.frustration_score > 30 ? 'bg-muted text-foreground' : 'bg-success text-success-foreground'}">${c.frustration_score}</span>
             <span class="text-sm text-foreground font-medium">${factCount} <span class="text-muted-foreground font-normal">facts</span></span>
@@ -66,6 +66,9 @@ function renderTable(customers) {
                 <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 13px; height: 13px;" data-icon="check-circle"><svg xmlns="http://www.w3.org/2000/svg" width="13px" height="13px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.6923076923076925"><path d="M21.801 10A10 10 0 1 1 17 3.335"></path><path d="m9 11l3 3L22 4"></path></g></svg></span>
                 ${accPct >= 70 ? 'Verified' : 'Needs review'}
               </span>
+            </div>
+            <div>
+              <button class="start-session-btn" data-customer-id="${escapeHtml(c.id)}" style="font-size:12px;padding:4px 10px;border-radius:6px;background:var(--color-primary);color:var(--color-primary-foreground);border:none;cursor:pointer;white-space:nowrap">Start session</button>
             </div>
           </div>
         </label>
@@ -78,6 +81,23 @@ function renderTable(customers) {
       </div>
     `;
   }).join('');
+
+  // Wire profile navigation
+  const navToProfile = (cid) => window.location.href = `./customer_profile.html?customer_id=${cid}`;
+  tbody.querySelectorAll('.memory-avatar, .memory-name').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navToProfile(el.dataset.customerId);
+    });
+  });
+
+  // Wire Start Session buttons
+  tbody.querySelectorAll('.start-session-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.location.href = `./liveagent.html?customer_id=${btn.dataset.customerId}`;
+    });
+  });
 }
 
 function renderFacts(memories) {

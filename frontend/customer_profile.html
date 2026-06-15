@@ -643,6 +643,10 @@
         <div class="flex flex-col flex-1 min-w-0">
           <!-- Top Bar -->
           <div class="h-14 bg-card border-b border-border flex items-center px-6 gap-4" data-component="@components/TopBar.jsx">
+            <button id="backBtn" class="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1" style="cursor:pointer;background:none;border:none;padding:4px 8px;border-radius:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18l-6-6l6-6"/></svg>
+              Back
+            </button>
             <span class="font-headings font-semibold text-lg text-foreground flex-shrink-0"><span data-file="/screens/CustomerProfile.jsx" data-idx="0">Customer Profile</span></span>
             <div class="flex-1 max-w-sm ml-4">
               <div class="bg-input rounded-md px-3 py-2 flex items-center gap-2 text-muted-foreground text-sm">
@@ -727,6 +731,10 @@
                 </svg>
                 <span id="frustration-ring-value" class="ring-value">62</span>
               </div>
+              <button id="startSessionBtn" class="flex items-center gap-1.5 text-sm font-semibold" style="padding:8px 16px;border-radius:8px;background:var(--color-primary);color:var(--color-primary-foreground);border:none;cursor:pointer;white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9l-14 9V3z"/></svg>
+                Start Session
+              </button>
             </div>
 
             <!-- Two-Column Layout -->

@@ -370,6 +370,24 @@ html, body {
   opacity: 0.9;
 }
 
+.view-profile-btn {
+  background: transparent;
+  color: var(--color-muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.view-profile-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 /* ---------- Trending issues panel ---------- */
 .side-panel {
   width: 320px;

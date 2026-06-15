@@ -31,6 +31,8 @@ const CUSTOMER_ID = params.get('customer_id');
     populateBehavior(memories);
     populatePreferences(memories);
     populateFrustrations(memories);
+    wireBackBtn();
+    wireStartSession();
   } catch (err) {
     console.error('Failed to load customer profile:', err);
     showError('Could not connect to the backend. Make sure the API server is running.');
@@ -245,6 +247,22 @@ function renderDots(pct) {
 
 function computeConfidence(memory) {
   return memory.id ? 80 + (memory.id.charCodeAt(memory.id.length - 1) % 20) : 85;
+}
+
+function wireBackBtn() {
+  const btn = document.getElementById('backBtn');
+  if (btn) {
+    btn.addEventListener('click', () => window.history.back());
+  }
+}
+
+function wireStartSession() {
+  const btn = document.getElementById('startSessionBtn');
+  if (btn && CUSTOMER_ID) {
+    btn.addEventListener('click', () => {
+      window.location.href = `./liveagent.html?customer_id=${CUSTOMER_ID}`;
+    });
+  }
 }
 
 function escapeHtml(str) {

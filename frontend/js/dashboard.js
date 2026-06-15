@@ -88,10 +88,10 @@ function renderQueue(customers, ticketsByCust) {
     card.className = `ticket-card${isHigh ? " priority" : ""}`;
 
     card.innerHTML = `
-      <div class="ticket-avatar-initials" style="background-color:${color}20;color:${color};font-weight:600;font-size:16px">${initials}</div>
+      <div class="ticket-avatar-initials" data-profile-id="${esc(c.id)}" style="cursor:pointer;background-color:${color}20;color:${color};font-weight:600;font-size:16px">${initials}</div>
       <div class="ticket-body">
         <div class="ticket-header">
-          <span class="ticket-name">${esc(c.name)}</span>
+          <span class="ticket-name" data-profile-id="${esc(c.id)}" style="cursor:pointer">${esc(c.name)}</span>
           <span class="ticket-wait">${timeAgo(c.created_at)}</span>
         </div>
         <p class="ticket-desc">${latest ? esc(latest.subject) : "No recent tickets"}</p>
@@ -112,6 +112,7 @@ function renderQueue(customers, ticketsByCust) {
         <div class="ticket-action-btns">
           ${latestId && open.length > 0 ? `<button class="resolve-btn" data-ticket-id="${esc(latestId)}">Resolve</button>` : ""}
           <button class="start-session-btn" data-customer-id="${esc(c.id)}">Start session</button>
+          <button class="view-profile-btn" data-customer-id="${esc(c.id)}">Profile</button>
         </div>
       </div>
     `;
@@ -150,6 +151,18 @@ function renderQueue(customers, ticketsByCust) {
         btn.textContent = "Resolve";
       }
     });
+  });
+
+  // Wire profile navigation
+  const navToProfile = (cid) => window.location.href = `./customer_profile.html?customer_id=${cid}`;
+
+  list.querySelectorAll("[data-profile-id]").forEach((el) => {
+    el.addEventListener("click", () => navToProfile(el.dataset.profileId));
+  });
+
+  // Wire profile buttons
+  list.querySelectorAll(".view-profile-btn").forEach((btn) => {
+    btn.addEventListener("click", () => navToProfile(btn.dataset.customerId));
   });
 }
 

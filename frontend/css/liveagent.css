@@ -454,6 +454,10 @@ svg {
   margin-top: 2px;
 }
 
+.profile-link:hover {
+  text-decoration: underline !important;
+}
+
 .frustration-ring {
   position: relative;
   width: 56px;
