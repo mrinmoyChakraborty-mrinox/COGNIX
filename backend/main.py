@@ -430,22 +430,30 @@ async def setup_my_profile(user: dict = Depends(get_current_user)):
     Called by frontend after signup/email verification.
     """
     email = user.get("email", "")
-    user_id = user.get("user_id", "")
 
-    # Check if customer already exists
     existing = await _get_customer_by_email(email)
     if existing:
         return existing
 
-    # Extract name from user metadata or email
-    full_name = user.get("full_name") or user.get("name") or email.split("@")[0]
-
-    # Create customer profile
+    full_name = user.get("full_name") or email.split("@")[0]
     req = CreateCustomerRequest(name=full_name, email=email)
     customer = await create_customer(req)
 
+    # Seed Hindsight memory bank on first profile creation
+    try:
+        await seed_customer_memory(
+            customer_id=customer.id,
+            customer_name=customer.name,
+            email=customer.email,
+        )
+    except Exception:
+        logger.warning(
+            "Could not seed memory bank on setup-profile | customer_id=%s",
+            customer.id,
+        )
+
     logger.info(
-        "Customer profile auto-created on signup | customer_id=%s | email=%s",
+        "Customer profile auto-created | customer_id=%s | email=%s",
         customer.id,
         email,
     )

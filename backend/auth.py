@@ -29,14 +29,21 @@ def get_supabase_client():
 def _verify_token(token: str) -> dict:
     client = get_supabase_client()
     user = client.auth.get_user(token)
-    user_id = user.user.id
-    email = user.user.email or ""
-    full_name = (
-        user.user.user_metadata.get("full_name") if user.user.user_metadata else None
-    )
+    user_obj = user.user
+    user_id = user_obj.id
+    email = user_obj.email or ""
+
+    # Pull name from Google OAuth or email signup metadata
+    meta = user_obj.user_metadata or {}
+    full_name = meta.get("full_name") or meta.get("name") or email.split("@")[0]
 
     role = _get_user_role(user_id, client)
-    return {"user_id": user_id, "email": email, "role": role, "full_name": full_name}
+    return {
+        "user_id": user_id,
+        "email": email,
+        "role": role,
+        "full_name": full_name,
+    }
 
 
 def _get_user_role(user_id: str, client=None) -> str:

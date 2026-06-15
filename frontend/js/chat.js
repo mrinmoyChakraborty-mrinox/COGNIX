@@ -44,7 +44,14 @@ async function apiFetch(path, opts = {}) {
 }
 
 async function loadProfile() {
-  const res = await apiFetch("/my/profile");
+  let res = await apiFetch("/my/profile");
+  if (res.status === 404) {
+    // Profile doesn't exist yet — try creating it
+    const setupRes = await apiFetch("/my/setup-profile", { method: "POST" });
+    if (setupRes.ok) {
+      res = await apiFetch("/my/profile");
+    }
+  }
   if (res.status === 404) {
     $("chatLayout").classList.add("hidden");
     $("errorScreen").classList.remove("hidden");
