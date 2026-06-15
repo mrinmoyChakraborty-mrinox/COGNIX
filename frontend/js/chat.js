@@ -408,13 +408,7 @@ function startPendingPoll() {
         for (const reply of data.replies || []) {
           appendMessage("assistant", reply.text);
         }
-        if (data.agent_disconnected) {
-          _agentConnected = false;
-          if (_pendingPollTimer) {
-            clearInterval(_pendingPollTimer);
-            _pendingPollTimer = null;
-          }
-        }
+        _agentConnected = !data.agent_disconnected;
       }
     } catch (_) {}
   }, 3000);

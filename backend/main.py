@@ -565,7 +565,7 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     customer = await _resolve_customer(user)
 
     await ensure_bank(customer.id, customer.name)
-    memories, _ = await retrieve_memories(customer.id, req.message)
+    memories, elapsed_ms = await retrieve_memories(customer.id, req.message)
     reflection = await reflect(customer.id, req.message)
 
     customer_tickets = await get_tickets(customer.id)
@@ -583,6 +583,26 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     agent_connected = agent_ws is not None
 
     if agent_connected:
+        # Push memory visualization to agent
+        try:
+            viz = build_retrieval_viz(req.message, memories, elapsed_ms)
+            logger.info(
+                "memory.update | customer_id=%s | memories=%d",
+                customer.id,
+                len(memories),
+            )
+            await agent_ws.send_json(
+                {
+                    "event": "memory.update",
+                    **viz,
+                }
+            )
+        except Exception:
+            logger.warning(
+                "Failed to push memory.update to agent WS | customer_id=%s",
+                customer.id,
+            )
+
         # Push customer message + AI suggestion to live agent
         try:
             await agent_ws.send_json(
@@ -598,7 +618,10 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
                 }
             )
         except Exception:
-            logger.warning("Failed to push to agent WS | customer_id=%s", customer.id)
+            logger.warning(
+                "Failed to push chat.reply to agent WS | customer_id=%s",
+                customer.id,
+            )
 
         # Check for pending agent replies
         pending = sessions.pop_pending_replies(customer.id)
@@ -719,6 +742,22 @@ async def websocket_session(
     # Register session so customer messages route here
     sessions.register(customer_id, websocket)
 
+    # Flush any pending replies that accumulated while agent was offline
+    orphaned = sessions.pop_pending_replies(customer_id)
+    if orphaned:
+        logger.info(
+            "Flushing %d orphaned pending replies to reconnected agent | customer_id=%s",
+            len(orphaned),
+            customer_id,
+        )
+        for reply in orphaned:
+            await websocket.send_json(
+                {
+                    "event": "agent_reply_sent",
+                    "data": reply["text"],
+                }
+            )
+
     # ── Opening message ──────────────────────────────────────
     # Agent briefing: reconstruct the full support history from Hindsight
     # so the agent sees synthesized context before the customer types.
@@ -811,6 +850,11 @@ async def websocket_session(
 
             # 3. Build the retrieval visualisation payload
             viz = build_retrieval_viz(message, memories, elapsed_ms)
+            logger.info(
+                "memory.update | customer_id=%s | memories=%d",
+                customer_id,
+                len(memories),
+            )
             await websocket.send_json(
                 {
                     "event": "memory.update",
