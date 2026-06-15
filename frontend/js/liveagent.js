@@ -137,21 +137,19 @@ function handleWsEvent(msg) {
   }
 }
 
-function sendAgentReply() {
-  const text = replyInput.value.trim();
-  if (!text) return;
+function sendCustomerMessage() {
+  const text = replyInput.value.trim() || "same issue as before";
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     appendMessage("system", "Not connected. Reconnecting...");
     return;
   }
 
-  appendMessage("agent", text);
   replyInput.value = "";
   replyInput.focus();
   hideSuggestedReply();
 
   socket.send(JSON.stringify({
-    type: "agent_reply",
+    type: "customer",
     text: text,
   }));
 }
@@ -470,10 +468,7 @@ function wireAiSuggest() {
   aiSuggestBtn.addEventListener("click", () => {
     const suggestion = aiSuggestBtn._suggestion;
     if (!suggestion) {
-      replyInput.placeholder = "Wait for a customer message first...";
-      setTimeout(() => {
-        replyInput.placeholder = "Type a reply...";
-      }, 2000);
+      sendCustomerMessage();
       return;
     }
     aiSuggestBtn.classList.add("is-loading");
@@ -492,12 +487,12 @@ function wireSend() {
   replyInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendAgentReply();
+      sendCustomerMessage();
     }
   });
 
   document.getElementById("sendBtn")
-    ?.addEventListener("click", sendAgentReply);
+    ?.addEventListener("click", sendCustomerMessage);
 }
 
 function escapeHtml(str) {

@@ -156,6 +156,17 @@ async def seed_customer_memory(
 # ── recall ───────────────────────────────────────────────────
 
 
+_SAFE_FALLBACK_QUERY = "recent customer activity"
+
+
+def _safe_query(query: str) -> str:
+    """Guard against queries Hindsight would reject (no word characters)."""
+    q = (query or "").strip()
+    if not q or not any(c.isalnum() for c in q):
+        return _SAFE_FALLBACK_QUERY
+    return q
+
+
 async def retrieve_memories(
     customer_id: str,
     query: str,
@@ -174,12 +185,13 @@ async def retrieve_memories(
     client = _get_client()
     await ensure_bank(customer_id)
 
+    safe = _safe_query(query)
     start = time.time()
 
     try:
         result = await client.arecall(
             bank_id=customer_id,
-            query=query,
+            query=safe,
             budget="mid",
         )
         elapsed_ms = round((time.time() - start) * 1000)
