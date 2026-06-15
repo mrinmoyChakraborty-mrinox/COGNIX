@@ -8,32 +8,51 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     window.location.href = "./chat.html";
     return;
   }
-  showSkeleton(true);
+
+  const tbody = document.getElementById('memory-table-body');
+  if (!tbody) {
+    console.error('FATAL: memory-table-body element not found');
+    return;
+  }
+
+  // Inline loading state — don't rely on skeleton CSS classes
+  tbody.innerHTML = `
+    <div style="padding:48px;text-align:center;
+                color:var(--color-muted-foreground);font-size:14px">
+      <div style="margin-bottom:8px">Loading customers…</div>
+    </div>`;
+
+  // Also hide the skeleton rows if they exist
+  document.querySelectorAll('.skeleton, .skeleton-card')
+    .forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.skeleton-target')
+    .forEach(el => el.style.display = '');
+
   try {
     const customers = await fetchJSON('/customers');
-    if (!customers.length) {
-      showEmpty('No customers found. Create one to get started.');
+
+    if (!customers || !customers.length) {
+      showEmpty('No customers found.');
       return;
     }
+
     const enriched = await Promise.all(
       customers.map(async (c) => {
-        try {
-          const [memories, tickets] = await Promise.all([
-            fetchJSON(`/customers/${c.id}/memories`),
-            fetchJSON(`/customers/${c.id}/tickets`),
-          ]);
-          return { ...c, memories, tickets };
-        } catch {
-          return { ...c, memories: [], tickets: [] };
-        }
+        const [memories, tickets] = await Promise.all([
+          fetchJSON(`/customers/${c.id}/memories`).catch(() => []),
+          fetchJSON(`/customers/${c.id}/tickets`).catch(() => []),
+        ]);
+        return { ...c, memories: memories || [], tickets: tickets || [] };
       })
     );
+
     renderTable(enriched);
+
   } catch (err) {
-    console.error('Failed to load memory inspector:', err);
-    showEmpty('Could not connect to the backend. Make sure the API server is running.');
-  } finally {
-    showSkeleton(false);
+    console.error('memory inspector init failed:', err);
+    showEmpty(
+      'Could not connect to backend: ' + (err.message || err)
+    );
   }
 })();
 
@@ -55,7 +74,15 @@ function renderTable(customers) {
               <span class="expand-icon" style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px; color: var(--color-muted-foreground); margin-right: 4px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m6 9l6 6l6-6"></path></svg>
               </span>
-              <img src="https://storage.googleapis.com/banani-avatars/avatar/male/25-35/South Asian/${Math.floor(Math.random() * 5)}" class="w-8 h-8 rounded-full memory-avatar" data-customer-id="${escapeHtml(c.id)}" style="cursor:pointer" />
+              <div class="memory-avatar" 
+                   data-customer-id="${escapeHtml(c.id)}"
+                   style="width:32px;height:32px;border-radius:50%;
+                          background:var(--color-primary);color:white;
+                          display:flex;align-items:center;
+                          justify-content:center;font-size:13px;
+                          font-weight:600;cursor:pointer;flex-shrink:0">
+                ${escapeHtml((c.name || '?')[0].toUpperCase())}
+              </div>
               <span class="text-sm font-medium text-foreground memory-name" data-customer-id="${escapeHtml(c.id)}" style="cursor:pointer">${escapeHtml(c.name)}</span>
             </div>
             <span class="text-xs font-semibold px-2 py-0.5 rounded-md ${c.frustration_score > 60 ? 'bg-warning text-warning-foreground' : c.frustration_score > 30 ? 'bg-muted text-foreground' : 'bg-success text-success-foreground'}">${c.frustration_score}</span>
@@ -159,20 +186,19 @@ function computeAccuracy(tickets) {
 }
 
 function showSkeleton(show) {
-  document.querySelectorAll('.skeleton').forEach(el => {
-    el.classList.toggle('hidden', !show);
-  });
-  document.querySelectorAll('.skeleton-target').forEach(el => {
-    el.classList.toggle('hidden', show);
-  });
+  // Loading state handled inline in init()
 }
 
 function showEmpty(msg) {
   const tbody = document.getElementById('memory-table-body');
   if (tbody) {
-    tbody.innerHTML = `<div class="px-4 py-8 text-center text-muted-foreground text-sm">${escapeHtml(msg)}</div>`;
+    tbody.innerHTML = `
+      <div style="padding:48px;text-align:center;
+                  color:var(--color-muted-foreground);
+                  font-size:14px">
+        ${escapeHtml(msg)}
+      </div>`;
   }
-  showSkeleton(false);
 }
 
 async function fetchJSON(path) {

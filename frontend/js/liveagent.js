@@ -107,20 +107,22 @@ function handleWsEvent(msg) {
       if (msg.escalation_flag) {
         showEscalationBanner(msg.escalation_reason);
       }
+      // NEW: update session notes with memory summary
       if (msg.memory_summary) {
-        addSessionNote(msg.memory_summary);
+        updateSessionNotes(msg.memory_summary);
       }
       break;
   }
 }
 
 function sendMessage() {
-  const text = replyInput.textContent.trim();
+  // textarea uses .value not .textContent
+  const text = replyInput.value.trim();
   if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
 
   appendMessage("user", text);
   socket.send(text);
-  replyInput.textContent = "";
+  replyInput.value = "";
   replyInput.focus();
 }
 
@@ -309,13 +311,11 @@ function wireAiSuggest() {
     aiSuggestBtn.classList.add("is-loading");
     aiSuggestBtn.disabled = true;
     setTimeout(() => {
-      replyInput.textContent = suggestion;
+      replyInput.value = suggestion;
       replyInput.focus();
-      const range = document.createRange();
-      range.selectNodeContents(replyInput);
-      range.collapse(false);
-      window.getSelection()?.removeAllRanges();
-      window.getSelection()?.addRange(range);
+      replyInput.setSelectionRange(
+        suggestion.length, suggestion.length
+      );
       aiSuggestBtn.classList.remove("is-loading");
       aiSuggestBtn.disabled = false;
     }, 400);
@@ -330,7 +330,8 @@ function wireSend() {
     }
   });
 
-  document.getElementById("sendBtn")?.addEventListener("click", sendMessage);
+  document.getElementById("sendBtn")
+    ?.addEventListener("click", sendMessage);
 }
 
 function escapeHtml(str) {
@@ -368,10 +369,12 @@ async function initProfile() {
   if (profileLinkEl) profileLinkEl.href = profileUrl;
   if (nameEl) {
     nameEl.style.cursor = "pointer";
+    nameEl.title = "View customer profile";
     nameEl.addEventListener("click", () => { window.location.href = profileUrl; });
   }
   if (avatarEl) {
     avatarEl.style.cursor = "pointer";
+    avatarEl.title = "View customer profile";
     avatarEl.addEventListener("click", () => { window.location.href = profileUrl; });
   }
 
@@ -426,246 +429,250 @@ async function wireResolveButton() {
   });
 }
 
-async function loadSidebarMemories() {
-  const el = document.getElementById("sidebarFacts");
-  if (!el || !CUSTOMER_ID) return;
+async function loadSidebarFacts() {
+  const panel = document.getElementById('sidebarFacts');
+  if (!panel || !CUSTOMER_ID) return;
 
-  el.innerHTML = `
+  panel.innerHTML = `
     <div class="section-header">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/>
-        <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/>
-        <path d="M18 18a4 4 0 0 0 2-7.464"/>
-        <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/>
-        <path d="M6 18a4 4 0 0 1-2-7.464"/>
-        <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+           stroke-width="3" stroke-linecap="round" 
+           stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4m0 4h.01"/>
       </svg>
       <span>Known Facts</span>
+      <span id="factsCount" style="margin-left:auto;font-size:11px;
+            color:var(--color-muted-foreground)">Loading…</span>
     </div>
-    <div class="sidebar-skeleton">
-      <div class="skeleton-line w-70"></div>
-      <div class="skeleton-line w-50"></div>
-      <div class="skeleton-line w-65"></div>
-    </div>
+    <div id="factsList" style="padding:0 12px 12px"></div>
   `;
 
+  const token = await getToken();
+  const headers = { 'Accept': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   try {
-    const token = await getToken();
-    const headers = { "Accept": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/customers/${CUSTOMER_ID}/memories`, { headers });
-    if (!res.ok) throw new Error(res.status);
+    const res = await fetch(
+      `${API_BASE}/customers/${CUSTOMER_ID}/memories`,
+      { headers }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const memories = await res.json();
 
-    // Remove skeleton
-    const skeleton = el.querySelector(".sidebar-skeleton");
-    if (skeleton) skeleton.remove();
+    const countEl = document.getElementById('factsCount');
+    if (countEl) countEl.textContent = `${memories.length} stored`;
+
+    const list = document.getElementById('factsList');
+    if (!list) return;
 
     if (!memories.length) {
-      el.innerHTML += `<p class="sidebar-empty">No facts stored yet. Facts will appear as the conversation progresses.</p>`;
+      list.innerHTML = `<p style="font-size:12px;
+        color:var(--color-muted-foreground);padding:4px 0">
+        No facts stored yet.</p>`;
       return;
     }
 
-    const groups = {
-      experience:  { label: "Experiences",   icon: "clock",  items: [] },
-      observation: { label: "Observations",  icon: "eye",    items: [] },
-      world_fact:  { label: "Known Facts",   icon: "info",   items: [] },
+    const TYPE_COLORS = {
+      world_fact: '#6366f1',
+      experience: '#f59e0b',
+      observation: '#22c55e',
+    };
+    const TYPE_LABELS = {
+      world_fact: 'Fact',
+      experience: 'Experience', 
+      observation: 'Observation',
     };
 
-    for (const m of memories) {
-      const key = m.memory_type in groups ? m.memory_type : "world_fact";
-      groups[key].items.push(m);
+    // Use window.formatMemory if available, else raw content
+    const fmt = (m) => window.formatMemory 
+      ? window.formatMemory(m) 
+      : (m.content || '').substring(0, 80);
+
+    list.innerHTML = memories.slice(0, 8).map(m => `
+      <div style="display:flex;align-items:flex-start;gap:8px;
+                  padding:5px 0;border-bottom:1px solid 
+                  var(--color-border)">
+        <span style="flex-shrink:0;width:7px;height:7px;
+                     border-radius:50%;margin-top:5px;
+                     background:${TYPE_COLORS[m.memory_type] 
+                       || '#6366f1'}"></span>
+        <div style="flex:1;min-width:0">
+          <p style="font-size:12px;color:var(--color-foreground);
+                    margin:0 0 2px;line-height:1.4;
+                    word-break:break-word">
+            ${escapeHtml(fmt(m))}
+          </p>
+          <span style="font-size:10px;
+                       color:var(--color-muted-foreground)">
+            ${TYPE_LABELS[m.memory_type] || 'Memory'}
+            ${m.context && m.context !== 'stored' 
+              ? ' · ' + escapeHtml(m.context) : ''}
+          </span>
+        </div>
+      </div>
+    `).join('');
+
+    if (memories.length > 8) {
+      list.innerHTML += `<p style="font-size:11px;
+        color:var(--color-muted-foreground);
+        padding:6px 0;text-align:center">
+        +${memories.length - 8} more facts in memory</p>`;
     }
 
-    const MAX_VISIBLE = 4;
-    for (const key of ["experience", "observation", "world_fact"]) {
-      const g = groups[key];
-      if (!g.items.length) continue;
-
-      const showMore = g.items.length > MAX_VISIBLE;
-
-      let html = `<div class="fact-group">
-        <div class="fact-group-header">
-          <span class="fact-group-label">${g.label}</span>
-          <span class="fact-group-count">${g.items.length}</span>
-        </div>`;
-
-      const visible = g.items.slice(0, MAX_VISIBLE);
-      for (const item of visible) {
-        html += `<div class="fact-item">
-          <div class="fact-dot fact-dot--${item.memory_type}"></div>
-          <p class="fact-content">${escapeHtml(window.formatMemory(item))}</p>
-        </div>`;
-      }
-
-      if (showMore) {
-        const extra = g.items.length - MAX_VISIBLE;
-        html += `<button class="fact-show-more" data-key="${key}">+ ${extra} more</button>`;
-      }
-
-      html += `</div>`;
-      el.insertAdjacentHTML("beforeend", html);
-    }
-
-    // Wire expand buttons
-    el.querySelectorAll(".fact-show-more").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const key = btn.dataset.key;
-        const group = groups[key];
-        if (!group) return;
-        btn.remove();
-        const extra = group.items.slice(MAX_VISIBLE);
-        const parent = btn.closest(".fact-group");
-        for (const item of extra) {
-          parent.insertAdjacentHTML("beforeend", `<div class="fact-item">
-            <div class="fact-dot fact-dot--${item.memory_type}"></div>
-            <p class="fact-content">${escapeHtml(window.formatMemory(item))}</p>
-          </div>`);
-        }
-      });
-    });
-
-  } catch {
-    const skeleton = el.querySelector(".sidebar-skeleton");
-    if (skeleton) skeleton.remove();
-    el.innerHTML += `<p class="sidebar-empty sidebar-error">Could not load facts.</p>`;
+  } catch (err) {
+    const list = document.getElementById('factsList');
+    if (list) list.innerHTML = `<p style="font-size:12px;
+      color:var(--color-muted-foreground)">
+      Failed to load facts.</p>`;
   }
 }
 
-async function loadSidebarTimeline() {
-  const el = document.getElementById("sidebarTimeline");
-  if (!el || !CUSTOMER_ID) return;
 
-  el.innerHTML = `
+async function loadSidebarTimeline() {
+  const panel = document.getElementById('sidebarTimeline');
+  if (!panel || !CUSTOMER_ID) return;
+
+  panel.innerHTML = `
     <div class="section-header">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="3" stroke-linecap="round" 
+           stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/>
         <path d="M12 6v6l4 2"/>
       </svg>
-      <span>Issue History</span>
+      <span>Ticket History</span>
     </div>
-    <div class="sidebar-skeleton">
-      <div class="skeleton-line w-60"></div>
-      <div class="skeleton-line w-45"></div>
-    </div>
+    <div id="timelineList" style="padding:0 12px 12px"></div>
   `;
 
+  const token = await getToken();
+  const headers = { 'Accept': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   try {
-    const token = await getToken();
-    const headers = { "Accept": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/customers/${CUSTOMER_ID}/tickets`, { headers });
-    if (!res.ok) throw new Error(res.status);
+    const res = await fetch(
+      `${API_BASE}/customers/${CUSTOMER_ID}/tickets`,
+      { headers }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tickets = await res.json();
 
-    const skeleton = el.querySelector(".sidebar-skeleton");
-    if (skeleton) skeleton.remove();
+    const list = document.getElementById('timelineList');
+    if (!list) return;
 
     if (!tickets.length) {
-      el.innerHTML += `<p class="sidebar-empty">No tickets yet.</p>`;
+      list.innerHTML = `<p style="font-size:12px;
+        color:var(--color-muted-foreground);padding:4px 0">
+        No tickets yet.</p>`;
       return;
     }
 
-    const sorted = [...tickets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    const MAX_VISIBLE = 5;
-    const showMore = sorted.length > MAX_VISIBLE;
-    const visible = sorted.slice(0, MAX_VISIBLE);
+    const fmt = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', 
+        { month: 'short', day: 'numeric' });
+    };
 
-    let html = `<div class="timeline-list">`;
-    for (const t of visible) {
-      const date = new Date(t.created_at);
-      const month = date.toLocaleString("en-US", { month: "short" });
-      html += `<div class="timeline-item">
-        <div class="timeline-dot timeline-dot--${t.status}"></div>
-        <div class="timeline-body">
-          <span class="timeline-date">${month} ${date.getDate()}</span>
-          <p class="timeline-subject">${escapeHtml(t.subject)}</p>
-          <span class="status-pill status-${t.status}">${t.status}</span>
+    const statusColor = (s) => 
+      s === 'resolved' ? '#22c55e' 
+      : s === 'escalated' ? '#ef4444' 
+      : '#f59e0b';
+
+    list.innerHTML = tickets.slice(0, 5).map(t => `
+      <div style="display:flex;align-items:flex-start;gap:8px;
+                  padding:5px 0;border-bottom:1px solid 
+                  var(--color-border)">
+        <span style="flex-shrink:0;width:7px;height:7px;
+                     border-radius:50%;margin-top:5px;
+                     background:${statusColor(t.status)}">
+        </span>
+        <div style="flex:1;min-width:0">
+          <p style="font-size:12px;color:var(--color-foreground);
+                    margin:0 0 2px;line-height:1.4;font-weight:500;
+                    white-space:nowrap;overflow:hidden;
+                    text-overflow:ellipsis">
+            ${escapeHtml(t.subject)}
+          </p>
+          <span style="font-size:10px;
+                       color:var(--color-muted-foreground)">
+            ${fmt(t.created_at)} · 
+            <span style="color:${statusColor(t.status)}">
+              ${t.status}
+            </span>
+          </span>
         </div>
-      </div>`;
-    }
-    if (showMore) {
-      html += `<button class="fact-show-more timeline-show-more">+ ${sorted.length - MAX_VISIBLE} more</button>`;
-    }
-    html += `</div>`;
-    el.insertAdjacentHTML("beforeend", html);
+      </div>
+    `).join('');
 
-    // Wire expand
-    const expandBtn = el.querySelector(".timeline-show-more");
-    if (expandBtn) {
-      expandBtn.addEventListener("click", () => {
-        expandBtn.remove();
-        const extra = sorted.slice(MAX_VISIBLE);
-        const list = el.querySelector(".timeline-list");
-        for (const t of extra) {
-          const date = new Date(t.created_at);
-          const month = date.toLocaleString("en-US", { month: "short" });
-          list.insertAdjacentHTML("beforeend", `<div class="timeline-item">
-            <div class="timeline-dot timeline-dot--${t.status}"></div>
-            <div class="timeline-body">
-              <span class="timeline-date">${month} ${date.getDate()}</span>
-              <p class="timeline-subject">${escapeHtml(t.subject)}</p>
-              <span class="status-pill status-${t.status}">${t.status}</span>
-            </div>
-          </div>`);
-        }
-      });
-    }
-
-  } catch {
-    const skeleton = el.querySelector(".sidebar-skeleton");
-    if (skeleton) skeleton.remove();
-    el.innerHTML += `<p class="sidebar-empty sidebar-error">Could not load history.</p>`;
+  } catch (err) {
+    const list = document.getElementById('timelineList');
+    if (list) list.innerHTML = `<p style="font-size:12px;
+      color:var(--color-muted-foreground)">
+      Failed to load tickets.</p>`;
   }
 }
 
-function initSessionNotes() {
-  const el = document.getElementById("sidebarSessionNotes");
-  if (!el) return;
-  el.innerHTML = `
+
+function initSidebarSessionNotes() {
+  const panel = document.getElementById('sidebarSessionNotes');
+  if (!panel) return;
+
+  panel.innerHTML = `
     <div class="section-header">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
-        <path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"/>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="3" stroke-linecap="round" 
+           stroke-linejoin="round">
+        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8l6 6v12a2 2 0 0 1-2 2z"/>
+        <path d="M14 2v6h6M10 9H8m8 4H8m8 4H8"/>
       </svg>
       <span>Session Notes</span>
     </div>
-    <div id="sessionNotesList" class="session-notes-list">
-      <p class="sidebar-empty">Notes will appear as the conversation progresses...</p>
+    <div id="sessionNotesList" style="padding:0 12px 12px;
+         font-size:12px;color:var(--color-muted-foreground)">
+      Notes will appear as the session progresses.
     </div>
   `;
 }
 
-function addSessionNote(text) {
-  const list = document.getElementById("sessionNotesList");
-  if (!list) return;
+// Call this from handleWsEvent when memory.update fires
+// to update session notes with the latest memory summary
+function updateSessionNotes(memorySummary) {
+  const list = document.getElementById('sessionNotesList');
+  if (!list || !memorySummary) return;
 
-  const placeholder = list.querySelector(".sidebar-empty");
-  if (placeholder) placeholder.remove();
-
-  const note = document.createElement("div");
-  note.className = "session-note";
-  note.style.cssText = "opacity:0;transform:translateY(4px);transition:opacity 0.3s,transform 0.3s";
+  const note = document.createElement('div');
+  note.style.cssText = 'padding:4px 0;border-bottom:1px solid var(--color-border);line-height:1.4;color:var(--color-foreground)';
   note.innerHTML = `
-    <span class="bullet bullet-primary">·</span>
-    <span class="session-note-text">${escapeHtml(text)}</span>
+    <span style="font-size:10px;color:var(--color-muted-foreground)">
+      ${new Date().toLocaleTimeString([], 
+        {hour:'2-digit',minute:'2-digit'})}
+    </span>
+    <p style="margin:2px 0 0;font-size:12px">
+      ${escapeHtml(memorySummary)}
+    </p>
   `;
-  list.appendChild(note);
-  requestAnimationFrame(() => {
-    note.style.opacity = "1";
-    note.style.transform = "translateY(0)";
-  });
+
+  // Remove placeholder text on first note
+  if (list.textContent.includes('Notes will appear')) {
+    list.innerHTML = '';
+  }
+  list.prepend(note);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   renderMemoryIdle();
-  initSessionNotes();
+  initSidebarSessionNotes();
   await loadAgent();
   await initProfile();
   wireSend();
   wireAiSuggest();
   connectWebSocket();
   wireResolveButton();
-  await loadSidebarMemories();
-  await loadSidebarTimeline();
+  // Load sidebar data after profile is loaded
+  await Promise.all([
+    loadSidebarFacts(),
+    loadSidebarTimeline(),
+  ]);
 });

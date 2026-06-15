@@ -307,13 +307,40 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
 
         memories: list[MemoryEntry] = []
         for m in result.items:
+            # Try every possible attribute name for the text content
+            content = (
+                getattr(m, "text", None)
+                or getattr(m, "content", None)
+                or getattr(m, "summary", None)
+                or getattr(m, "fact", None)
+                or getattr(m, "statement", None)
+            )
+            # Skip if we still can't get clean text
+            if not content or not isinstance(content, str):
+                continue
+            # Skip raw Python repr strings (fallback gone wrong)
+            if content.strip().startswith("{'") or content.strip().startswith('{"'):
+                continue
+
+            raw_type = (
+                getattr(m, "fact_type", None)
+                or getattr(m, "memory_type", None)
+                or getattr(m, "type", None)
+                or "world_fact"
+            )
+            context = (
+                getattr(m, "context", None) or getattr(m, "category", None) or "stored"
+            )
+            if not isinstance(context, str) or not context:
+                context = "stored"
+
             memories.append(
                 MemoryEntry(
-                    id=str(uuid4()),
+                    id=str(getattr(m, "id", uuid4())),
                     customer_id=customer_id,
-                    content=str(m),
-                    context="stored",
-                    memory_type="world_fact",
+                    content=content,
+                    context=context,
+                    memory_type=_map_memory_type(str(raw_type)),
                     created_at=datetime.now(timezone.utc),
                 )
             )
