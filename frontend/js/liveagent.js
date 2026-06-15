@@ -65,6 +65,7 @@ async function connectWebSocket() {
 
   socket.onmessage = (event) => {
     const msg = JSON.parse(event.data);
+    console.log("Memory data", msg);
     handleWsEvent(msg);
   };
 
@@ -85,7 +86,7 @@ function handleWsEvent(msg) {
   switch (msg.event) {
 
     case "opening":
-      appendMessage("assistant", msg.data);
+      appendMessage("assistant", "**AGENT BRIEF**\n\n" + msg.data);
       break;
 
     case "status":
@@ -193,6 +194,40 @@ function showMemoryScanning(query) {
   `;
 }
 
+function buildMemoryGraph(hits) {
+  if (!hits || !hits.length) return "";
+  const nodes = [];
+  const edges = [];
+  const seen = new Set();
+  hits.forEach((h) => {
+    const s = window.formatMemory(h);
+    const cat = window.categorizeMemory(h);
+    if (!s || seen.has(s)) return;
+    seen.add(s);
+    const id = "n" + nodes.length;
+    nodes.push({ id, label: s, type: cat });
+    if (nodes.length > 1) edges.push({ from: nodes[0].id, to: id });
+  });
+  console.log("Visualization nodes", nodes);
+  console.log("Visualization edges", edges);
+  if (!nodes.length) return "";
+  let html = `<div class="memory-graph"><div class="graph-legend">`;
+  [...new Set(nodes.map((n) => n.type))].forEach((t) => {
+    const cls = t.toLowerCase();
+    html += `<span class="memory-category-badge ${cls}">${t}</span>`;
+  });
+  html += `</div><div class="graph-tree">`;
+  nodes.forEach((n, i) => {
+    const cls = n.type.toLowerCase();
+    const indent = i === 0 ? "" : " style='padding-left:24px'";
+    const connector = i === 0 ? "" : " class='graph-child'";
+    html += `<div class="graph-node"${indent}><span class="graph-dot dot-${cls}"${connector}></span><span class="graph-label">${escapeHtml(n.label)}</span></div>`;
+    if (i === 0 && nodes.length > 1) html += `<div class="graph-connector"></div>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
 function renderMemoryViz(msg) {
   if (!memoryPanel) return;
   if (memoryPanel._scanInterval) {
@@ -206,6 +241,7 @@ function renderMemoryViz(msg) {
   const query = escapeHtml(msg.query || "");
   const ms = msg.retrieval_time_ms || 0;
 
+  console.log("Visualization nodes", hits);
   memoryPanel.innerHTML = `
     <div class="section-header">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
@@ -214,6 +250,7 @@ function renderMemoryViz(msg) {
     </div>
     <div class="memory-query-pill">Query: <code>"${query}"</code></div>
     <div class="memory-hits" id="memoryHits"></div>
+    <div id="memoryGraphContainer"></div>
     <div class="memory-footer">${hits.length} memories retrieved · ${ms}ms</div>
   `;
 
@@ -226,13 +263,18 @@ function renderMemoryViz(msg) {
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
       <div>
-        <p class="memory-hit-content">${escapeHtml(hit.content)}</p>
+        <p class="memory-hit-content">${escapeHtml(window.formatMemory(hit))}</p>
         <span class="memory-type-badge ${TYPE_CLASSES[hit.memory_type] || ""}">${TYPE_LABELS[hit.memory_type] || "Memory"}</span>
       </div>
     `;
     container.appendChild(el);
     setTimeout(() => el.classList.add("visible"), 200 + i * 150);
   });
+  const graphContainer = document.getElementById("memoryGraphContainer");
+  if (graphContainer) {
+    const graphHtml = buildMemoryGraph(hits);
+    graphContainer.innerHTML = graphHtml;
+  }
 }
 
 function renderMemoryIdle() {
@@ -452,7 +494,7 @@ async function loadSidebarMemories() {
       for (const item of visible) {
         html += `<div class="fact-item">
           <div class="fact-dot fact-dot--${item.memory_type}"></div>
-          <p class="fact-content">${escapeHtml(item.content)}</p>
+          <p class="fact-content">${escapeHtml(window.formatMemory(item))}</p>
         </div>`;
       }
 
@@ -477,7 +519,7 @@ async function loadSidebarMemories() {
         for (const item of extra) {
           parent.insertAdjacentHTML("beforeend", `<div class="fact-item">
             <div class="fact-dot fact-dot--${item.memory_type}"></div>
-            <p class="fact-content">${escapeHtml(item.content)}</p>
+            <p class="fact-content">${escapeHtml(window.formatMemory(item))}</p>
           </div>`);
         }
       });

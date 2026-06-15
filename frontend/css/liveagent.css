@@ -1155,3 +1155,65 @@ svg {
   color: var(--color-foreground);
   line-height: 1.45;
 }
+
+/* ── Memory Graph Visualization ───────────────────── */
+.memory-graph {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--color-border);
+}
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.graph-legend .memory-category-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+}
+.graph-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.graph-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.graph-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.graph-dot.dot-issue { background: var(--color-danger); }
+.graph-dot.dot-preference { background: var(--color-primary); }
+.graph-dot.dot-ticket { background: #b45309; }
+.graph-dot.dot-resolution { background: var(--color-success); }
+.graph-dot.dot-sentiment { background: #dc2626; }
+.graph-dot.dot-observation { background: #7e22ce; }
+.graph-child {
+  position: relative;
+}
+.graph-child::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: var(--color-border);
+}
+.graph-connector {
+  width: 1px;
+  height: 8px;
+  background: var(--color-border);
+  margin-left: 4px;
+}
+.graph-label {
+  font-size: 11px;
+  color: var(--color-foreground);
+  line-height: 1.35;
+}

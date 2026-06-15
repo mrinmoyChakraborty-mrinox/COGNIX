@@ -153,7 +153,7 @@ function populateMemoryGraph(memories) {
             <div class="confidence-ring-inner">${conf}%</div>
           </div>
           <div>
-            <span class="text-base font-semibold text-foreground">${escapeHtml(f.content)}</span>
+            <span class="text-base font-semibold text-foreground">${escapeHtml(window.formatMemory(f))}</span>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
               <span class="text-xs text-muted-foreground">${conf}% confidence</span>
@@ -173,7 +173,7 @@ function populateBehavior(memories) {
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #f0f2f5 0%, #f5f6f8 100%);">
         <span class="flex-shrink-0" style="font-size: 20px; line-height: 1;">⚡</span>
         <div class="flex-1 min-w-0">
-          <span class="body-text font-medium text-foreground block">${escapeHtml(obs[0].content)}</span>
+          <span class="body-text font-medium text-foreground block">${escapeHtml(window.formatMemory(obs[0]))}</span>
           <div class="flex items-center gap-2 mt-0.5">
             <div class="confidence-dots">${renderDots(75)}</div>
             <span class="text-xs text-muted-foreground">75% confidence</span>
@@ -192,7 +192,7 @@ function populatePreferences(memories) {
   container.innerHTML = likes.length
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
         <span class="flex-shrink-0" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: var(--color-success); color: white; font-size: 12px; font-weight: 700;">✓</span>
-        <span class="body-text font-medium text-foreground">${escapeHtml(likes[0].content)}</span>
+        <span class="body-text font-medium text-foreground">${escapeHtml(window.formatMemory(likes[0]))}</span>
       </div>`
     : '<div class="body-text text-muted-foreground">No preferences recorded.</div>';
 }
@@ -207,7 +207,7 @@ function populateFrustrations(memories) {
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">
         <span class="flex-shrink-0" style="font-size: 18px; line-height: 1;">⚠</span>
         <div class="flex-1 min-w-0">
-          <span class="body-text font-medium text-foreground block">${escapeHtml(risks[0].content)}</span>
+          <span class="body-text font-medium text-foreground block">${escapeHtml(window.formatMemory(risks[0]))}</span>
           <span class="text-xs text-warning font-medium">High priority</span>
         </div>
       </div>`

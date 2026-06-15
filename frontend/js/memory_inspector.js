@@ -98,57 +98,58 @@ function renderTable(customers) {
       window.location.href = `./liveagent.html?customer_id=${btn.dataset.customerId}`;
     });
   });
+
+  // Wire memory card click to open modal
+  tbody.querySelectorAll('.memory-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const content = card.dataset.memoryContent;
+      const category = card.dataset.memoryCategory;
+      const type = card.dataset.memoryType;
+      const ctx = card.dataset.memoryContext;
+      const overlay = document.createElement('div');
+      overlay.className = 'memory-modal-overlay';
+      overlay.innerHTML = `
+        <div class="memory-modal">
+          <div class="memory-modal-header">
+            <div>
+              <span class="memory-category-badge ${category.toLowerCase()}">${category}</span>
+              <span class="text-xs text-muted-foreground ml-2">${escapeHtml(type)}${ctx ? ' / ' + escapeHtml(ctx) : ''}</span>
+            </div>
+            <button class="memory-modal-close">&times;</button>
+          </div>
+          <div class="memory-modal-content">${escapeHtml(content)}</div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('.memory-modal-close').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    });
+  });
 }
 
 function renderFacts(memories) {
-  const groups = {
-    'Environment': [],
-    'Technical Stack': [],
-    'Known Issues': [],
-    'Resolutions': [],
-    'Other': [],
-  };
-  memories.forEach(m => {
-    const c = (m.content || '').toLowerCase();
-    if (m.context === 'environment' || c.includes('os:') || c.includes('browser') || c.includes('macos') || c.includes('windows') || c.includes('linux')) {
-      groups['Environment'].push(m);
-    } else if (m.memory_type === 'experience' || c.includes('incident') || c.includes('error') || c.includes('timeout') || c.includes('outage') || c.includes('fail')) {
-      groups['Known Issues'].push(m);
-    } else if (m.memory_type === 'observation' || (c.includes('successful') && c.includes('resolution')) || c.includes('fix') || c.includes('resolved') || c.includes('patch')) {
-      groups['Resolutions'].push(m);
-    } else if (c.includes('api') || c.includes('sdk') || c.includes('version') || c.includes('runtime') || c.includes('node') || c.includes('python') || c.includes('framework')) {
-      groups['Technical Stack'].push(m);
-    } else {
-      groups['Other'].push(m);
-    }
-  });
-
-  return Object.entries(groups)
-    .filter(([_, items]) => items.length)
-    .map(([label, items]) => `
-      <div class="${label !== 'Other' ? 'mb-4' : ''}">
-        <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">${label}</span>
-        <div class="grid grid-cols-2 gap-2">
-          ${items.map(m => {
-            const isIssue = label === 'Known Issues';
-            const isRes = label === 'Resolutions';
-            const borderColor = isIssue ? 'border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);' : isRes ? 'border-color: color-mix(in srgb, var(--color-success) 30%, transparent);' : '';
-            return `
-              <div class="flex items-center gap-3 bg-card rounded-md px-3 py-2 border border-border" style="${borderColor}">
-                <span class="text-xs text-muted-foreground w-28 flex-shrink-0 truncate">${escapeHtml(m.context || m.memory_type)}</span>
-                <span class="text-xs text-foreground font-medium flex-1 truncate">${escapeHtml(m.content)}</span>
-                <div class="flex items-center gap-1.5 flex-shrink-0">
-                  ${isIssue ? '<span class="text-warning"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="alert-circle"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4m0 4h.01"></path></g></svg></span></span>' : '<span class="text-success"><span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 11px; height: 11px;" data-icon="check"><svg xmlns="http://www.w3.org/2000/svg" width="11px" height="11px" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.363636363636363" d="M20 6L9 17l-5-5"></path></svg></span></span>'}
-                  <button class="text-xs text-primary">Edit</button>
-                  <button class="text-xs text-muted-foreground">Delete</button>
-                  <button class="text-xs text-success">Verify</button>
-                </div>
-              </div>
-            `;
-          }).join('')}
+  const items = memories.map(m => ({
+    memory: m,
+    summary: window.formatMemory(m),
+    category: window.categorizeMemory(m),
+    border: m.memory_type === 'experience' ? 'border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);' : m.memory_type === 'observation' ? 'border-color: color-mix(in srgb, var(--color-success) 30%, transparent);' : '',
+  }));
+  return `
+    <div class="memory-grid">
+      ${items.map(({ memory: m, summary, category, border }) => `
+        <div class="memory-card" style="${border}" data-memory-content="${escapeHtml(m.content)}" data-memory-category="${category}" data-memory-type="${escapeHtml(m.memory_type)}" data-memory-context="${escapeHtml(m.context || '')}">
+          <div class="memory-card-header">
+            <span class="memory-category-badge ${category.toLowerCase()}">${category}</span>
+            <span class="text-xs text-muted-foreground">${escapeHtml(m.memory_type)}</span>
+          </div>
+          <div class="memory-card-text">${escapeHtml(summary)}</div>
+          <div class="memory-card-footer">
+            <span>${escapeHtml(m.context || '')}</span>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('')}
+    </div>
+  `;
 }
 
 function computeAccuracy(tickets) {
