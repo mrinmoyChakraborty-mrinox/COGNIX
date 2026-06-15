@@ -806,6 +806,10 @@ async def websocket_session(
 
             logger.info("WS message type=%s", msg_type)
 
+            # ── Keepalive ping ────────────────────────────────
+            if msg_type == "ping":
+                continue
+
             # ── Agent reply: no AI processing ────────────────
             if msg_type == "agent_reply":
                 await save_memory(

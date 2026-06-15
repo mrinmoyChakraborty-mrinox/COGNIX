@@ -6,6 +6,7 @@ const params = new URLSearchParams(window.location.search);
 const CUSTOMER_ID = params.get("customer_id");
 
 let socket = null;
+let _wsReconnectTimer = null;
 
 const chatMessages = document.querySelector(".chat-messages");
 const replyInput   = document.querySelector(".reply-input");
@@ -50,37 +51,76 @@ async function fetchCustomer() {
   }
 }
 
+let _wsPingTimer = null;
+
 async function connectWebSocket() {
   if (!CUSTOMER_ID) {
     appendMessage("system", "No customer selected. Go back to the dashboard.");
     return;
   }
 
+  // Clear any pending reconnect timer from a previous attempt
+  if (_wsReconnectTimer) {
+    clearTimeout(_wsReconnectTimer);
+    _wsReconnectTimer = null;
+  }
+
+  // If a socket already exists and is healthy, don't duplicate
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+    console.log("WS already connected/connecting, skipping duplicate connect");
+    return;
+  }
+
   const token = await getToken();
+  console.log("WS connecting | customer_id=", CUSTOMER_ID, "token=", token ? token.substring(0, 12) + "..." : token);
   const wsUrl = `${WS_BASE}/ws/session/${CUSTOMER_ID}${token ? `?token=${token}` : ""}`;
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
-    console.info("WS connected | customer_id=", CUSTOMER_ID);
+    console.info("WS onopen | customer_id=", CUSTOMER_ID, "readyState=", socket.readyState);
     appendMessage("system",
       "Session started \u2014 waiting for customer message.");
+
+    // Keepalive ping every 25 seconds to prevent proxy idle timeouts
+    if (_wsPingTimer) clearInterval(_wsPingTimer);
+    _wsPingTimer = setInterval(() => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send('{"type":"ping"}');
+      }
+    }, 25000);
   };
 
   socket.onmessage = (event) => {
     const msg = JSON.parse(event.data);
-    console.log("Memory data", msg);
+    console.log("WS onmessage | event=", msg.event || "(raw)", msg);
     handleWsEvent(msg);
   };
 
-  socket.onerror = () => {
-    console.error("WS error");
+  socket.onerror = (err) => {
+    console.error("WS onerror | customer_id=", CUSTOMER_ID, "error=", err?.message || err, "readyState=", socket?.readyState);
     appendMessage("system", "Connection error. Retrying...");
-    setTimeout(connectWebSocket, 3000);
+    if (_wsReconnectTimer) clearTimeout(_wsReconnectTimer);
+    _wsReconnectTimer = setTimeout(connectWebSocket, 3000);
   };
 
   socket.onclose = (e) => {
+    console.warn(
+      "WS onclose | customer_id=", CUSTOMER_ID,
+      "code=", e.code,
+      "reason=", e.reason || "(none)",
+      "wasClean=", e.wasClean,
+      "readyState=", socket?.readyState,
+    );
+    if (_wsPingTimer) {
+      clearInterval(_wsPingTimer);
+      _wsPingTimer = null;
+    }
+    // Normal close (1000) or no close code — probably intentional
+    // Abnormal close (1006) — connection dropped unexpectedly
+    // 4004 — customer not found, don't reconnect
     if (e.code !== 4004) {
-      setTimeout(connectWebSocket, 3000);
+      if (_wsReconnectTimer) clearTimeout(_wsReconnectTimer);
+      _wsReconnectTimer = setTimeout(connectWebSocket, 3000);
     }
   };
 }
@@ -129,6 +169,10 @@ function handleWsEvent(msg) {
       break;
 
     case "agent_reply_sent":
+      // Incoming orphaned/flushed reply on reconnect — render in chat
+      if (msg.data) {
+        appendMessage("agent", msg.data);
+      }
       break;
 
     case "error":
