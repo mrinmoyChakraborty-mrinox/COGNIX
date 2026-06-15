@@ -216,6 +216,15 @@ async def retrieve_memories(
             len(memories),
             elapsed_ms,
         )
+        if memories:
+            for i, m in enumerate(memories[:10]):
+                logger.info(
+                    "  memory[%d] | type=%s | context=%s | text=%r",
+                    i,
+                    m.memory_type,
+                    m.context,
+                    m.content[:200],
+                )
         return memories, elapsed_ms
 
     except Exception as exc:
@@ -393,6 +402,11 @@ async def reflect(customer_id: str, query: str) -> str:
             budget="high",
         )
         logger.info("reflect complete | customer_id=%s | query=%r", customer_id, query)
+        logger.info(
+            "reflect output | customer_id=%s | text=%r",
+            customer_id,
+            response.text[:500],
+        )
         return response.text
 
     except Exception as exc:

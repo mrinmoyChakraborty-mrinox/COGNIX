@@ -331,7 +331,14 @@ async def generate_support_response(
     Memory is NOT saved here — that's main.py's responsibility.
     This function only generates; main.py persists.
     """
+    logger.info(
+        "generate_support_response | customer_id=%s | memories=%d | message=%r",
+        customer.id,
+        len(memories),
+        message[:150],
+    )
     prompt = _build_prompt(customer, memories, message, reflection, tickets)
+    logger.info("PROMPT for %s\n%s", customer.id, prompt)
 
     try:
         result = await _get_agent().run(prompt)
@@ -346,12 +353,20 @@ async def generate_support_response(
             output.frustration_score,
             output.escalation_flag,
         )
+        logger.info(
+            "RESPONSE for %s\nresponse=%r\nsolution=%r\nmemory_summary=%r",
+            customer.id,
+            output.response[:300],
+            output.suggested_solution,
+            output.memory_summary,
+        )
         return output
 
     except Exception as exc:
         logger.warning(
-            "LLM call failed, using heuristic fallback | customer_id=%s | error=%s",
+            "LLM call FAILED, using heuristic fallback | customer_id=%s | error=%s",
             customer.id,
             exc,
+            exc_info=True,
         )
         return _fallback_result(customer, message)
