@@ -51,14 +51,8 @@ html, body {
 .sidebar-logo {
   width: 32px;
   height: 32px;
-  background-color: var(--color-primary);
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary-foreground);
-  font-weight: 700;
-  font-size: 14px;
+  object-fit: contain;
   margin-bottom: 24px;
 }
 
