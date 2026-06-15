@@ -90,14 +90,9 @@ async def ensure_bank(customer_id: str, customer_name: str = "") -> None:
 
     try:
         await client.acreate_bank(
-            bank_id=customer_id,
+            customer_id,
             name=customer_name or customer_id,
             background=background,
-            disposition={
-                "skepticism": 2,  # 1–5 scale: 2 = mostly trusting
-                "literalism": 2,  # 1–5 scale: 2 = reads context flexibly
-                "empathy": 5,  # 1–5 scale: 5 = maximum empathy
-            },
         )
         _bank_cache.add(customer_id)
         logger.info("Memory bank created | customer_id=%s", customer_id)
@@ -186,7 +181,6 @@ async def retrieve_memories(
             bank_id=customer_id,
             query=query,
             budget="mid",
-            include_entities=True,
         )
         elapsed_ms = round((time.time() - start) * 1000)
 
@@ -264,7 +258,7 @@ async def save_memory(
             bank_id=customer_id,
             content=content,
             context=context,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
         if metadata:
             kwargs["metadata"] = metadata
@@ -295,19 +289,21 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
     """
     Return all memories stored for a customer.
     Used by GET /customers/{customer_id}/memories.
-    Paginates up to 200 entries (enough for a hackathon demo).
+    Uses a broad recall query to fetch relevant memories since
+    list_memories is not available in the Hindsight SDK.
     """
     client = _get_client()
     await ensure_bank(customer_id)
 
     try:
-        result = await client.memory.list_memories(
-            bank_id=customer_id, limit=200, offset=0
+        result = await client.arecall(
+            bank_id=customer_id,
+            query="customer history",
+            budget="high",
         )
 
         memories: list[MemoryEntry] = []
-        for m in result.items:
-            # Try every possible attribute name for the text content
+        for m in result.results:
             content = (
                 getattr(m, "text", None)
                 or getattr(m, "content", None)
@@ -315,10 +311,8 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
                 or getattr(m, "fact", None)
                 or getattr(m, "statement", None)
             )
-            # Skip if we still can't get clean text
             if not content or not isinstance(content, str):
                 continue
-            # Skip raw Python repr strings (fallback gone wrong)
             if content.strip().startswith("{'") or content.strip().startswith('{"'):
                 continue
 

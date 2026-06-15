@@ -201,7 +201,10 @@ function populateFrustrations(memories) {
   const container = document.getElementById('frustrations-container');
   if (!container) return;
   const risks = memories.filter(m =>
-    m.memory_type === 'risk_signal' || m.context === 'incident'
+    m.memory_type === 'experience' ||
+    m.context === 'incident' ||
+    m.content.toLowerCase().includes('escalat') ||
+    m.content.toLowerCase().includes('frustrat')
   ).slice(0, 1);
   container.innerHTML = risks.length
     ? `<div class="insight-card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);">

@@ -155,6 +155,14 @@ function renderTable(customers) {
 }
 
 function renderFacts(memories) {
+  const CATEGORY_COLORS = {
+    issue:      "background:#fee2e2;color:#991b1b",
+    resolution: "background:#dcfce7;color:#166534",
+    preference: "background:#eff6ff;color:#1d4ed8",
+    sentiment:  "background:#faf5ff;color:#7e22ce",
+    observation:"background:#fef9c3;color:#854d0e",
+    ticket:     "background:#f1f5f9;color:#475569",
+  };
   const items = memories.map(m => ({
     memory: m,
     summary: window.formatMemory(m),
@@ -162,11 +170,11 @@ function renderFacts(memories) {
     border: m.memory_type === 'experience' ? 'border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);' : m.memory_type === 'observation' ? 'border-color: color-mix(in srgb, var(--color-success) 30%, transparent);' : '',
   }));
   return `
-    <div class="memory-grid">
+    <div class="memory-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
       ${items.map(({ memory: m, summary, category, border }) => `
         <div class="memory-card" style="${border}" data-memory-content="${escapeHtml(m.content)}" data-memory-category="${category}" data-memory-type="${escapeHtml(m.memory_type)}" data-memory-context="${escapeHtml(m.context || '')}">
           <div class="memory-card-header">
-            <span class="memory-category-badge ${category.toLowerCase()}">${category}</span>
+            <span class="memory-category-badge" style="${CATEGORY_COLORS[category.toLowerCase()] || ''}">${category}</span>
             <span class="text-xs text-muted-foreground">${escapeHtml(m.memory_type)}</span>
           </div>
           <div class="memory-card-text">${escapeHtml(summary)}</div>

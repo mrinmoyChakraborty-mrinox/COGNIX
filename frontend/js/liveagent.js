@@ -10,6 +10,7 @@ let socket = null;
 const chatMessages = document.querySelector(".chat-messages");
 const replyInput   = document.querySelector(".reply-input");
 const aiSuggestBtn = document.getElementById("aiSuggestBtn");
+if (aiSuggestBtn) aiSuggestBtn._suggestion = "Same issue as before";
 const memoryPanel  = document.getElementById("memoryPanel");
 const escalationBanner = document.getElementById("escalationBanner");
 
@@ -110,6 +111,10 @@ function handleWsEvent(msg) {
       // NEW: update session notes with memory summary
       if (msg.memory_summary) {
         updateSessionNotes(msg.memory_summary);
+      }
+      // Update frustration score if provided
+      if (typeof msg.frustration_score === "number") {
+        updateFrustrationScore(msg.frustration_score);
       }
       break;
   }
@@ -301,6 +306,18 @@ function showEscalationBanner(reason) {
     </div>
   `;
   escalationBanner.classList.remove("hidden");
+}
+
+function updateFrustrationScore(score) {
+  const scoreEl = document.getElementById("profileFrustrationScore");
+  const circleEl = document.getElementById("frustrationCircle");
+  if (scoreEl) scoreEl.textContent = score;
+  if (circleEl) {
+    const r = 23, c = 2 * Math.PI * r;
+    const offset = c - (score / 100) * c;
+    circleEl.setAttribute("stroke-dasharray", `${c - offset} ${offset}`);
+    circleEl.setAttribute("stroke", score >= 75 ? "#ef4444" : score >= 45 ? "#f59e0b" : "#22c55e");
+  }
 }
 
 function wireAiSuggest() {
