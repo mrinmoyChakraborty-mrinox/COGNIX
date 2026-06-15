@@ -163,7 +163,11 @@ async def create_customer(req: CreateCustomerRequest) -> Customer:
             "frustration_score": 0,
         }
 
-        resp = await client.table("customers").insert(payload).execute()
+        resp = (
+            await client.table("customers")
+            .upsert(payload, on_conflict="email")
+            .execute()
+        )
 
         if not resp.data:
             raise RuntimeError("Supabase insert returned no data")
