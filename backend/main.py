@@ -19,6 +19,7 @@
 #   9. Demo Endpoint
 # ============================================================
 
+import json
 import os
 import logging
 import logging.config
@@ -76,6 +77,7 @@ if USE_MOCK:
         create_ticket,
         resolve_ticket,
         escalate_ticket,
+        update_frustration_score,
     )
 
     logger.info("Using mock repositories")
@@ -84,6 +86,7 @@ else:
         get_customer,
         list_customers,
         create_customer,
+        update_frustration_score,
     )
     from repositories.ticket_repository import (
         get_tickets,
@@ -103,7 +106,7 @@ from memory import (
     seed_customer_memory,
     build_retrieval_viz,
 )
-from agent import generate_response
+from agent import generate_response, generate_support_response
 
 from auth import get_current_user, get_supabase_client, require_admin, verify_ws_token
 
@@ -648,66 +651,90 @@ async def websocket_session(
     # ── Message loop ─────────────────────────────────────────
     try:
         while True:
-            raw = await websocket.receive_text()
-            message = raw.strip()
-            if not message:
+            raw_message = await websocket.receive_text()
+
+            # Try to parse as JSON (agent reply) or plain text (customer message)
+            try:
+                parsed = json.loads(raw_message)
+                msg_type = parsed.get("type", "customer")
+                message_text = parsed.get("text", "")
+            except (json.JSONDecodeError, AttributeError):
+                msg_type = "customer"
+                message_text = raw_message
+
+            message_text = message_text.strip()
+            if not message_text:
                 continue
 
-            # Immediate feedback so the customer sees a typing indicator
+            # ── Agent reply: no AI processing ────────────────
+            if msg_type == "agent_reply":
+                await save_memory(
+                    customer_id,
+                    f"Agent replied: {message_text[:120]}",
+                    "agent reply",
+                )
+                await websocket.send_json(
+                    {
+                        "event": "agent_reply_sent",
+                        "data": message_text,
+                    }
+                )
+                continue
+
+            # ── Customer message: run full AI pipeline ───────
+            message = message_text
+
+            # 1. Send status update
             await websocket.send_json(
                 {
                     "event": "status",
-                    "data": "thinking...",
                     "query": message,
                 }
             )
 
-            # 1. Retrieve memories — returns (memories, elapsed_ms)
+            # 2. Retrieve memories — returns (memories, elapsed_ms)
             memories, elapsed_ms = await retrieve_memories(customer_id, message)
 
-            # 2. Build the retrieval visualisation payload and push it
-            #    to the agent panel BEFORE the LLM has even finished.
-            #    This makes the panel feel live and fast.
+            # 3. Build the retrieval visualisation payload
             viz = build_retrieval_viz(message, memories, elapsed_ms)
             await websocket.send_json(
                 {
                     "event": "memory.update",
-                    **viz,  # query, hits, total, retrieval_time_ms
+                    **viz,
                 }
             )
 
-            # 3. Reflect — synthesised summary over all memories
+            # 4. Reflect — synthesised summary over all memories
             reflection = await reflect(customer_id, message)
 
-            # 4. Fetch tickets and generate LLM response
+            # 5. Fetch tickets and generate full support result
             customer_tickets = await get_tickets(customer_id)
-            response_text, suggested_solution, memory_summary = await generate_response(
+            result = await generate_support_response(
                 customer, memories, message, reflection, tickets=customer_tickets
             )
 
-            # 5. Save this interaction to memory (async-friendly — fire and don't wait)
-            await save_memory(
-                customer_id,
-                f'Customer said: "{message[:120]}". '
-                f'Agent replied: "{response_text[:120]}".',
-                "support session",
-            )
-
-            # 6. Compute escalation flag from customer's frustration score
-            frustration_score = customer.frustration_score
-            escalation_flag = frustration_score > 70
-
-            # 7. Send reply to frontend
+            # 6. Send suggested reply to agent
             await websocket.send_json(
                 {
                     "event": "chat.reply",
-                    "data": response_text,
-                    "suggested_solution": suggested_solution,
-                    "escalation_flag": escalation_flag,
-                    "frustration_score": frustration_score,
-                    "memory_summary": memory_summary,
+                    "data": message,
+                    "suggested_reply": result.response,
+                    "suggested_solution": result.suggested_solution,
+                    "escalation_flag": result.escalation_flag,
+                    "escalation_reason": result.escalation_reason,
+                    "frustration_score": result.frustration_score,
+                    "memory_summary": result.memory_summary,
                 }
             )
+
+            # 7. Save memory and update frustration score
+            await save_memory(
+                customer_id,
+                f'Customer: "{message[:120]}". '
+                f'Agent suggested: "{result.response[:80]}".',
+                "support session",
+            )
+            await update_frustration_score(customer_id, result.frustration_score)
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected | customer_id=%s", customer_id)

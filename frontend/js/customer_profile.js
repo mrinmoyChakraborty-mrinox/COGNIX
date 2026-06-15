@@ -245,27 +245,27 @@ function populateFrustrations(memories) {
     : '<div class="body-text text-muted-foreground">No known frustrations.</div>';
 }
 
-// Replace showSkeleton() entirely:
 function showSkeleton(show) {
   document.querySelectorAll('.skeleton').forEach(el => {
     el.style.display = show ? '' : 'none';
+    el.classList.toggle('hidden', !show);
   });
   document.querySelectorAll('.skeleton-target').forEach(el => {
     el.style.display = show ? 'none' : '';
+    el.classList.toggle('hidden', show);
   });
 }
 
-// Replace showError():
 function showError(msg) {
-  // Force hide skeletons regardless of state
   document.querySelectorAll('.skeleton').forEach(el => {
     el.style.display = 'none';
+    el.classList.add('hidden');
   });
   document.querySelectorAll('.skeleton-target').forEach(el => {
     el.style.display = '';
+    el.classList.remove('hidden');
   });
 
-  // Try multiple containers to show error
   const targets = [
     document.getElementById('timeline-container'),
     document.getElementById('memory-graph-container'),

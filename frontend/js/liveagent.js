@@ -10,7 +10,7 @@ let socket = null;
 const chatMessages = document.querySelector(".chat-messages");
 const replyInput   = document.querySelector(".reply-input");
 const aiSuggestBtn = document.getElementById("aiSuggestBtn");
-if (aiSuggestBtn) aiSuggestBtn._suggestion = "Same issue as before";
+if (aiSuggestBtn) aiSuggestBtn._suggestion = null;
 const memoryPanel  = document.getElementById("memoryPanel");
 const escalationBanner = document.getElementById("escalationBanner");
 
@@ -62,6 +62,8 @@ async function connectWebSocket() {
 
   socket.onopen = () => {
     console.info("WS connected | customer_id=", CUSTOMER_ID);
+    appendMessage("system",
+      "Session started \u2014 waiting for customer message.");
   };
 
   socket.onmessage = (event) => {
@@ -87,7 +89,7 @@ function handleWsEvent(msg) {
   switch (msg.event) {
 
     case "opening":
-      appendMessage("assistant", "**AGENT BRIEF**\n\n" + msg.data);
+      appendMessage("system", msg.data);
       break;
 
     case "status":
@@ -101,48 +103,91 @@ function handleWsEvent(msg) {
       break;
 
     case "chat.reply":
-      appendMessage("assistant", msg.data);
-      if (msg.suggested_solution) {
-        aiSuggestBtn._suggestion = msg.suggested_solution;
+      showTypingIndicator(false);
+
+      appendMessage("customer", msg.data);
+
+      if (msg.suggested_reply) {
+        showSuggestedReply(msg.suggested_reply, msg.suggested_solution);
       }
+
+      if (msg.suggested_reply && aiSuggestBtn) {
+        aiSuggestBtn._suggestion = msg.suggested_reply;
+      }
+
       if (msg.escalation_flag) {
         showEscalationBanner(msg.escalation_reason);
       }
-      // NEW: update session notes with memory summary
+
       if (msg.memory_summary) {
         updateSessionNotes(msg.memory_summary);
       }
-      // Update frustration score if provided
+
       if (typeof msg.frustration_score === "number") {
         updateFrustrationScore(msg.frustration_score);
       }
       break;
+
+    case "agent_reply_sent":
+      break;
+
+    case "error":
+      appendMessage("system", msg.data || "An error occurred.");
+      break;
   }
 }
 
-function sendMessage() {
-  // textarea uses .value not .textContent
+function sendAgentReply() {
   const text = replyInput.value.trim();
-  if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+  if (!text) return;
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    appendMessage("system", "Not connected. Reconnecting...");
+    return;
+  }
 
-  appendMessage("user", text);
-  socket.send(text);
+  appendMessage("agent", text);
   replyInput.value = "";
   replyInput.focus();
+  hideSuggestedReply();
+
+  socket.send(JSON.stringify({
+    type: "agent_reply",
+    text: text,
+  }));
 }
 
 function appendMessage(role, text) {
   showTypingIndicator(false);
   const div = document.createElement("div");
-  div.className = `msg ${role === "user" ? "msg-right" : role === "system" ? "msg-left" : "msg-left"}`;
-  div.innerHTML = `
-    <div class="msg-body">
-      <div class="bubble ${role === "user" ? "bubble-outgoing" : "bubble-incoming"}">
-        ${escapeHtml(text)}
-      </div>
-      <span class="msg-time">${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>
-    </div>
-  `;
+
+  if (role === "system") {
+    div.className = "msg msg-system";
+    div.innerHTML = `
+      <div class="msg-body" style="justify-content:center">
+        <div class="bubble" style="background:var(--color-secondary);
+             color:var(--color-muted-foreground);font-size:12px;
+             padding:6px 12px;border-radius:20px">
+          ${escapeHtml(text)}
+        </div>
+      </div>`;
+  } else if (role === "agent") {
+    div.className = "msg msg-right";
+    div.innerHTML = `
+      <div class="msg-body">
+        <div class="bubble bubble-outgoing">${escapeHtml(text)}</div>
+        <span class="msg-time">${new Date().toLocaleTimeString([],
+          {hour:"2-digit",minute:"2-digit"})}</span>
+      </div>`;
+  } else {
+    div.className = "msg msg-left";
+    div.innerHTML = `
+      <div class="msg-body">
+        <div class="bubble bubble-incoming">${escapeHtml(text)}</div>
+        <span class="msg-time">${new Date().toLocaleTimeString([],
+          {hour:"2-digit",minute:"2-digit"})}</span>
+      </div>`;
+  }
+
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -320,22 +365,126 @@ function updateFrustrationScore(score) {
   }
 }
 
+let _suggestionEl = null;
+
+function showSuggestedReply(suggestion, solution) {
+  hideSuggestedReply();
+
+  _suggestionEl = document.createElement("div");
+  _suggestionEl.className = "suggested-reply-bubble";
+  _suggestionEl.style.cssText = `
+    margin: 8px 12px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #f0f0ff, #e8e8ff);
+    border: 1.5px solid var(--color-primary, #6366f1);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--color-foreground);
+    position: relative;
+    animation: fadeIn 0.2s ease;
+  `;
+
+  _suggestionEl.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <svg style="flex-shrink:0;margin-top:2px;color:var(--color-primary)"
+           width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1l1.2 4.5a2 2 0 0 0 1.3 1.3L15 8l-4.5 1.2a2 2 0 0 0-1.3 1.3L8 15l-1.2-4.5A2 2 0 0 0 5.5 9.2L1 8l4.5-1.2A2 2 0 0 0 6.8 5.5L8 1Z"
+              stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:600;color:var(--color-primary);
+                    text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">
+          AI Suggested Reply
+        </div>
+        <div style="line-height:1.5" id="suggestionText">
+          ${escapeHtml(suggestion)}
+        </div>
+        ${solution ? `
+          <div style="margin-top:6px;padding:4px 8px;background:rgba(99,102,241,0.08);
+                      border-radius:6px;font-size:11px;color:var(--color-primary)">
+            💡 ${escapeHtml(solution)}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <button id="acceptSuggestionBtn"
+        style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;
+               background:var(--color-primary);color:white;font-size:12px;
+               font-weight:500">
+        Use this reply
+      </button>
+      <button id="editSuggestionBtn"
+        style="flex:1;padding:6px;border-radius:6px;cursor:pointer;
+               background:transparent;
+               border:1px solid var(--color-primary);
+               color:var(--color-primary);font-size:12px;font-weight:500">
+        Edit first
+      </button>
+      <button id="dismissSuggestionBtn"
+        style="padding:6px 10px;border-radius:6px;cursor:pointer;
+               background:transparent;border:1px solid var(--color-border);
+               color:var(--color-muted-foreground);font-size:12px">
+        ✕
+      </button>
+    </div>
+  `;
+
+  chatMessages.appendChild(_suggestionEl);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  document.getElementById('acceptSuggestionBtn')
+    ?.addEventListener('click', () => {
+      sendAgentReplyText(suggestion);
+      hideSuggestedReply();
+    });
+
+  document.getElementById('editSuggestionBtn')
+    ?.addEventListener('click', () => {
+      replyInput.value = suggestion;
+      replyInput.focus();
+      replyInput.setSelectionRange(suggestion.length, suggestion.length);
+      hideSuggestedReply();
+    });
+
+  document.getElementById('dismissSuggestionBtn')
+    ?.addEventListener('click', hideSuggestedReply);
+}
+
+function hideSuggestedReply() {
+  if (_suggestionEl) {
+    _suggestionEl.remove();
+    _suggestionEl = null;
+  }
+}
+
+function sendAgentReplyText(text) {
+  if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+  appendMessage("agent", text);
+  hideSuggestedReply();
+  socket.send(JSON.stringify({ type: "agent_reply", text }));
+}
+
 function wireAiSuggest() {
   if (!aiSuggestBtn || !replyInput) return;
   aiSuggestBtn.addEventListener("click", () => {
     const suggestion = aiSuggestBtn._suggestion;
-    if (!suggestion) return;
+    if (!suggestion) {
+      replyInput.placeholder = "Wait for a customer message first...";
+      setTimeout(() => {
+        replyInput.placeholder = "Type a reply...";
+      }, 2000);
+      return;
+    }
     aiSuggestBtn.classList.add("is-loading");
     aiSuggestBtn.disabled = true;
     setTimeout(() => {
       replyInput.value = suggestion;
       replyInput.focus();
-      replyInput.setSelectionRange(
-        suggestion.length, suggestion.length
-      );
+      replyInput.setSelectionRange(suggestion.length, suggestion.length);
       aiSuggestBtn.classList.remove("is-loading");
       aiSuggestBtn.disabled = false;
-    }, 400);
+    }, 300);
   });
 }
 
@@ -343,12 +492,12 @@ function wireSend() {
   replyInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      sendAgentReply();
     }
   });
 
   document.getElementById("sendBtn")
-    ?.addEventListener("click", sendMessage);
+    ?.addEventListener("click", sendAgentReply);
 }
 
 function escapeHtml(str) {
@@ -438,7 +587,7 @@ async function wireResolveButton() {
       });
       if (res.ok) {
         btn.style.display = "none";
-        appendMessage("assistant", "✅ Ticket marked as resolved.");
+        appendMessage("system", "✅ Ticket marked as resolved.");
       }
     } catch (e) {
       console.warn("resolve ticket failed", e);
