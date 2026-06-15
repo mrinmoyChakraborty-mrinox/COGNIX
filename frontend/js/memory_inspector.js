@@ -13,9 +13,9 @@ let selectedCustomerId = null;
   const tbody = document.getElementById("memory-table-body");
   if (!tbody) return;
 
+  tbody.classList.remove("hidden");
   tbody.innerHTML = `<div style="padding:48px;text-align:center;color:var(--color-muted-foreground);font-size:14px">Loading customers…</div>`;
   document.querySelectorAll(".skeleton, .skeleton-card").forEach(el => el.style.display = "none");
-  document.querySelectorAll(".skeleton-target").forEach(el => el.style.display = "");
 
   try {
     const me = await fetchJSON("/debug/me");
