@@ -60,6 +60,7 @@ async def _get_client() -> AsyncClient:
 
 # ── helpers ──────────────────────────────────────────────────
 
+
 def _row_to_ticket(row: dict) -> Ticket:
     """Map a raw Supabase row dict → Ticket model."""
     return Ticket(
@@ -86,6 +87,7 @@ def _new_ticket_id() -> str:
 
 # ── public interface ─────────────────────────────────────────
 
+
 async def get_tickets(customer_id: str) -> list[Ticket]:
     """
     Return all tickets for a customer, newest first.
@@ -103,14 +105,17 @@ async def get_tickets(customer_id: str) -> list[Ticket]:
         tickets = [_row_to_ticket(row) for row in (resp.data or [])]
         logger.info(
             "get_tickets | customer_id=%s | count=%d",
-            customer_id, len(tickets),
+            customer_id,
+            len(tickets),
         )
         return tickets
 
     except Exception as exc:
         logger.error(
             "get_tickets failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -126,7 +131,7 @@ async def get_ticket(ticket_id: str) -> Optional[Ticket]:
             .maybe_single()
             .execute()
         )
-        if resp.data is None:
+        if resp is None or resp.data is None:
             logger.warning("Ticket not found | ticket_id=%s", ticket_id)
             return None
         return _row_to_ticket(resp.data)
@@ -134,7 +139,9 @@ async def get_ticket(ticket_id: str) -> Optional[Ticket]:
     except Exception as exc:
         logger.error(
             "get_ticket failed | ticket_id=%s | error=%s",
-            ticket_id, exc, exc_info=True,
+            ticket_id,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -146,24 +153,20 @@ async def create_ticket(customer_id: str, subject: str) -> Ticket:
     Import increment_ticket_count lazily to avoid circular imports.
     """
     try:
-        client  = await _get_client()
-        now     = datetime.now(timezone.utc).isoformat()
-        new_id  = _new_ticket_id()
+        client = await _get_client()
+        now = datetime.now(timezone.utc).isoformat()
+        new_id = _new_ticket_id()
 
         payload = {
-            "id":          new_id,
+            "id": new_id,
             "customer_id": customer_id,
-            "subject":     subject,
-            "status":      "open",
-            "created_at":  now,
+            "subject": subject,
+            "status": "open",
+            "created_at": now,
             "resolved_at": None,
         }
 
-        resp = (
-            await client.table("tickets")
-            .insert(payload)
-            .execute()
-        )
+        resp = await client.table("tickets").insert(payload).execute()
 
         if not resp.data:
             raise RuntimeError("Supabase insert returned no data for ticket")
@@ -171,12 +174,14 @@ async def create_ticket(customer_id: str, subject: str) -> Ticket:
         ticket = _row_to_ticket(resp.data[0])
         logger.info(
             "Ticket created | ticket_id=%s | customer_id=%s",
-            ticket.id, customer_id,
+            ticket.id,
+            customer_id,
         )
 
         # Keep customer.ticket_count accurate
         try:
             from repositories.customer_repository import increment_ticket_count
+
             await increment_ticket_count(customer_id)
         except Exception as inc_exc:
             # Non-fatal — ticket is created, count sync can lag
@@ -189,7 +194,9 @@ async def create_ticket(customer_id: str, subject: str) -> Ticket:
     except Exception as exc:
         logger.error(
             "create_ticket failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -200,7 +207,7 @@ async def resolve_ticket(ticket_id: str) -> Ticket:
     Raises ValueError if the ticket is not found.
     """
     try:
-        client      = await _get_client()
+        client = await _get_client()
         resolved_at = datetime.now(timezone.utc).isoformat()
 
         resp = (
@@ -222,7 +229,9 @@ async def resolve_ticket(ticket_id: str) -> Ticket:
     except Exception as exc:
         logger.error(
             "resolve_ticket failed | ticket_id=%s | error=%s",
-            ticket_id, exc, exc_info=True,
+            ticket_id,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -256,7 +265,9 @@ async def escalate_ticket(ticket_id: str) -> Ticket:
     except Exception as exc:
         logger.error(
             "escalate_ticket failed | ticket_id=%s | error=%s",
-            ticket_id, exc, exc_info=True,
+            ticket_id,
+            exc,
+            exc_info=True,
         )
         raise
 
@@ -280,13 +291,16 @@ async def get_open_ticket_count(customer_id: str) -> int:
         count = resp.count or 0
         logger.info(
             "get_open_ticket_count | customer_id=%s | open=%d",
-            customer_id, count,
+            customer_id,
+            count,
         )
         return count
 
     except Exception as exc:
         logger.error(
             "get_open_ticket_count failed | customer_id=%s | error=%s",
-            customer_id, exc, exc_info=True,
+            customer_id,
+            exc,
+            exc_info=True,
         )
         return 0

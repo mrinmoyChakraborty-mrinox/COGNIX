@@ -101,7 +101,9 @@ async def get_customer(customer_id: str) -> Optional[Customer]:
             .maybe_single()  # returns None instead of raising on 0 rows
             .execute()
         )
-        if resp.data is None:
+        # resp can be None when maybe_single + execute() finds no rows
+        # (supabase-py v2.5+ async client returns None, not APIResponse)
+        if resp is None or resp.data is None:
             logger.warning("Customer not found | customer_id=%s", customer_id)
             return None
 
@@ -162,7 +164,7 @@ async def create_customer(req: CreateCustomerRequest) -> Customer:
             .maybe_single()
             .execute()
         )
-        if existing.data:
+        if existing is not None and existing.data:
             customer = _row_to_customer(existing.data)
             logger.info(
                 "Customer already exists, returning existing | customer_id=%s | email=%s",
@@ -255,7 +257,7 @@ async def get_or_create_customer_profile(email: str, name: str) -> Customer:
         .maybe_single()
         .execute()
     )
-    if existing.data:
+    if existing is not None and existing.data:
         customer = _row_to_customer(existing.data)
         logger.info(
             "Profile lookup hit | customer_id=%s | email=%s",
@@ -300,7 +302,7 @@ async def get_or_create_customer_profile(email: str, name: str) -> Customer:
             .maybe_single()
             .execute()
         )
-        if retry.data:
+        if retry is not None and retry.data:
             logger.info("Profile found after retry (race) | email=%s", email)
             return _row_to_customer(retry.data)
         raise
