@@ -230,6 +230,9 @@ function selectTicket(ticket) {
   const container = $("chatMessages");
   if (!container) return;
 
+  // Save references to elements that would be destroyed by innerHTML = ""
+  const savedTypingRow = $("typingRow");
+
   container.innerHTML = "";
   const welcome = $("welcomeBanner");
   if (welcome) {
@@ -238,8 +241,8 @@ function selectTicket(ticket) {
     container.appendChild(welcome);
   }
 
-  const typingRow = $("typingRow");
-  if (typingRow) container.appendChild(typingRow);
+  // Re-insert typingRow — still a live reference even after innerHTML = ""
+  if (savedTypingRow) container.appendChild(savedTypingRow);
 
   hide("ticketDropdown");
 
