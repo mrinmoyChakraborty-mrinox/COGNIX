@@ -347,6 +347,12 @@ async def customer_chat(req: ChatRequest, user: dict = Depends(get_current_user)
 async def resolve_ticket_endpoint(ticket_id: str, _: dict = Depends(require_admin)):
     try:
         ticket = await resolve_ticket(ticket_id)
+        # Save resolution to Hindsight so future reflect() calls know about it
+        await save_memory(
+            ticket.customer_id,
+            f"Ticket resolved: '{ticket.subject}'. Resolved on {datetime.now(timezone.utc).strftime('%b %d, %Y')}.",
+            "ticket resolution",
+        )
         return ticket
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -517,8 +523,9 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     memories, _ = await retrieve_memories(customer.id, req.message)
     reflection = await reflect(customer.id, req.message)
 
+    customer_tickets = await get_tickets(customer.id)
     response_text, suggested_solution, memory_summary = await generate_response(
-        customer, memories, req.message, reflection
+        customer, memories, req.message, reflection, tickets=customer_tickets
     )
 
     await save_memory(
@@ -672,9 +679,10 @@ async def websocket_session(
             # 3. Reflect — synthesised summary over all memories
             reflection = await reflect(customer_id, message)
 
-            # 4. Generate LLM response
+            # 4. Fetch tickets and generate LLM response
+            customer_tickets = await get_tickets(customer_id)
             response_text, suggested_solution, memory_summary = await generate_response(
-                customer, memories, message, reflection
+                customer, memories, message, reflection, tickets=customer_tickets
             )
 
             # 5. Save this interaction to memory (async-friendly — fire and don't wait)

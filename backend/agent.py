@@ -139,6 +139,7 @@ def _build_prompt(
     memories: list[MemoryEntry],
     message: str,
     reflection: str,
+    tickets: list | None = None,
 ) -> str:
     """
     Build the full prompt sent to the LLM.
@@ -159,12 +160,29 @@ def _build_prompt(
     # Format reflection
     reflection_text = reflection.strip() if reflection else "No reflection available."
 
+    # Format tickets
+    if tickets:
+        ticket_lines = "\n".join(
+            f"  - [{t.status.upper()}] {t.subject} "
+            f"(opened {t.created_at.strftime('%b %d')})"
+            + (
+                f" → resolved {t.resolved_at.strftime('%b %d')}"
+                if t.resolved_at
+                else ""
+            )
+            for t in tickets[:5]
+        )
+    else:
+        ticket_lines = "  No ticket history available."
+
     return (
         "=== CUSTOMER PROFILE ===\n"
         f"Name:             {customer.name}\n"
         f"ID:               {customer.id}\n"
         f"Tickets so far:   {customer.ticket_count}\n"
         f"Frustration:      {customer.frustration_score}/100 (prior sessions)\n\n"
+        "=== TICKET HISTORY ===\n"
+        f"{ticket_lines}\n\n"
         "=== RETRIEVED MEMORIES (from Hindsight) ===\n"
         f"{memory_lines}\n\n"
         "=== HINDSIGHT REFLECTION ===\n"
@@ -283,8 +301,11 @@ async def generate_response(
     memories: list[MemoryEntry],
     message: str,
     reflection: str,
+    tickets: list | None = None,
 ) -> tuple[str, str | None, str]:
-    result = await generate_support_response(customer, memories, message, reflection)
+    result = await generate_support_response(
+        customer, memories, message, reflection, tickets
+    )
     return result.response, result.suggested_solution, result.memory_summary
 
 
@@ -296,6 +317,7 @@ async def generate_support_response(
     memories: list[MemoryEntry],
     message: str,
     reflection: str,
+    tickets: list | None = None,
 ) -> SupportResult:
     """
     Main entry point called from main.py.
@@ -309,7 +331,7 @@ async def generate_support_response(
     Memory is NOT saved here — that's main.py's responsibility.
     This function only generates; main.py persists.
     """
-    prompt = _build_prompt(customer, memories, message, reflection)
+    prompt = _build_prompt(customer, memories, message, reflection, tickets)
 
     try:
         result = await _get_agent().run(prompt)
