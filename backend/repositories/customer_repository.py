@@ -148,9 +148,29 @@ async def create_customer(req: CreateCustomerRequest) -> Customer:
     Generates a uuid4 id here rather than relying on Supabase gen_random_uuid()
     so we can pass the same id immediately to ensure_bank() in main.py
     without a second round-trip to fetch the generated id.
+
+    Uses check-then-insert to avoid upsert overwriting the id column on conflict.
     """
     try:
         client = await _get_client()
+
+        # Check if customer already exists by email
+        existing = (
+            await client.table("customers")
+            .select("*")
+            .eq("email", req.email)
+            .maybe_single()
+            .execute()
+        )
+        if existing.data:
+            customer = _row_to_customer(existing.data)
+            logger.info(
+                "Customer already exists, returning existing | customer_id=%s | email=%s",
+                customer.id,
+                customer.email,
+            )
+            return customer
+
         new_id = f"cust_{uuid4().hex[:12]}"
         now = datetime.now(timezone.utc).isoformat()
 
@@ -163,11 +183,7 @@ async def create_customer(req: CreateCustomerRequest) -> Customer:
             "frustration_score": 0,
         }
 
-        resp = (
-            await client.table("customers")
-            .upsert(payload, on_conflict="email")
-            .execute()
-        )
+        resp = await client.table("customers").insert(payload).execute()
 
         if not resp.data:
             raise RuntimeError("Supabase insert returned no data")
@@ -220,6 +236,74 @@ async def update_frustration_score(customer_id: str, score: int) -> bool:
             exc_info=True,
         )
         return False
+
+
+async def get_or_create_customer_profile(email: str, name: str) -> Customer:
+    """
+    Look up a customer by email, or create one if it doesn't exist.
+    Idempotent — safe to call on every request.
+    Handles concurrent signup race via try-lookup → insert → retry-lookup.
+    """
+    client = await _get_client()
+    logger.info("get_or_create_customer_profile | email=%s | name=%s", email, name)
+
+    # 1. Lookup first
+    existing = (
+        await client.table("customers")
+        .select("*")
+        .eq("email", email)
+        .maybe_single()
+        .execute()
+    )
+    if existing.data:
+        customer = _row_to_customer(existing.data)
+        logger.info(
+            "Profile lookup hit | customer_id=%s | email=%s",
+            customer.id,
+            email,
+        )
+        return customer
+
+    # 2. Not found — insert
+    new_id = f"cust_{uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {
+        "id": new_id,
+        "name": name,
+        "email": email,
+        "created_at": now,
+        "ticket_count": 0,
+        "frustration_score": 0,
+    }
+
+    logger.info("Profile not found, inserting | new_id=%s | email=%s", new_id, email)
+
+    try:
+        resp = await client.table("customers").insert(payload).execute()
+        if not resp.data:
+            raise RuntimeError("Supabase insert returned empty data")
+        customer = _row_to_customer(resp.data[0])
+        logger.info("Profile created | customer_id=%s | email=%s", customer.id, email)
+        return customer
+    except Exception as exc:
+        logger.error(
+            "Profile insert failed | email=%s | error=%s",
+            email,
+            exc,
+            exc_info=True,
+        )
+        # 3. Race — another request may have inserted between our check and insert
+        retry = (
+            await client.table("customers")
+            .select("*")
+            .eq("email", email)
+            .maybe_single()
+            .execute()
+        )
+        if retry.data:
+            logger.info("Profile found after retry (race) | email=%s", email)
+            return _row_to_customer(retry.data)
+        raise
 
 
 async def increment_ticket_count(customer_id: str) -> bool:

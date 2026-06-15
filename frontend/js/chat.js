@@ -44,18 +44,19 @@ async function apiFetch(path, opts = {}) {
 }
 
 async function loadProfile() {
+  // /my/profile now auto-creates the profile if it doesn't exist.
+  // It never returns 404 for a valid authenticated user.
   let res = await apiFetch("/my/profile");
-  if (res.status === 404) {
-    // Profile doesn't exist yet — try creating it
+  if (!res.ok) {
+    // Fallback: try setup-profile explicitly (legacy path)
     const setupRes = await apiFetch("/my/setup-profile", { method: "POST" });
     if (setupRes.ok) {
       res = await apiFetch("/my/profile");
+    } else {
+      $("chatLayout").classList.add("hidden");
+      $("errorScreen").classList.remove("hidden");
+      return null;
     }
-  }
-  if (res.status === 404) {
-    $("chatLayout").classList.add("hidden");
-    $("errorScreen").classList.remove("hidden");
-    return null;
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();

@@ -13,7 +13,6 @@
 
 import os
 import time
-import asyncio
 import logging
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -89,8 +88,8 @@ async def ensure_bank(customer_id: str, customer_name: str = "") -> None:
         "without asking the customer to repeat themselves."
     )
 
-    def _create():
-        client.create_bank(
+    try:
+        await client.acreate_bank(
             bank_id=customer_id,
             name=customer_name or customer_id,
             background=background,
@@ -100,9 +99,6 @@ async def ensure_bank(customer_id: str, customer_name: str = "") -> None:
                 "empathy": 5,  # 1–5 scale: 5 = maximum empathy
             },
         )
-
-    try:
-        await asyncio.to_thread(_create)
         _bank_cache.add(customer_id)
         logger.info("Memory bank created | customer_id=%s", customer_id)
     except Exception as exc:
@@ -147,9 +143,7 @@ async def seed_customer_memory(
     ]
 
     try:
-        await asyncio.to_thread(
-            lambda: client.retain_batch(bank_id=customer_id, items=items)
-        )
+        await client.aretain_batch(bank_id=customer_id, items=items)
         logger.info(
             "Seeded baseline memories | customer_id=%s | count=%d",
             customer_id,
@@ -188,13 +182,11 @@ async def retrieve_memories(
     start = time.time()
 
     try:
-        result = await asyncio.to_thread(
-            lambda: client.recall(
-                bank_id=customer_id,
-                query=query,
-                budget="mid",
-                include_entities=True,
-            )
+        result = await client.arecall(
+            bank_id=customer_id,
+            query=query,
+            budget="mid",
+            include_entities=True,
         )
         elapsed_ms = round((time.time() - start) * 1000)
 
@@ -277,7 +269,7 @@ async def save_memory(
         if metadata:
             kwargs["metadata"] = metadata
 
-        await asyncio.to_thread(lambda: client.retain(**kwargs))
+        await client.aretain(**kwargs)
         logger.info(
             "retain complete | customer_id=%s | context=%s | chars=%d",
             customer_id,
@@ -309,9 +301,7 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
     await ensure_bank(customer_id)
 
     try:
-        result = await asyncio.to_thread(
-            lambda: client.list_memories(bank_id=customer_id, limit=200, offset=0)
-        )
+        result = await client.alist_memories(bank_id=customer_id, limit=200, offset=0)
 
         memories: list[MemoryEntry] = []
         for m in result.items:
@@ -362,12 +352,10 @@ async def reflect(customer_id: str, query: str) -> str:
     await ensure_bank(customer_id)
 
     try:
-        response = await asyncio.to_thread(
-            lambda: client.reflect(
-                bank_id=customer_id,
-                query=query,
-                budget="high",
-            )
+        response = await client.areflect(
+            bank_id=customer_id,
+            query=query,
+            budget="high",
         )
         logger.info("reflect complete | customer_id=%s | query=%r", customer_id, query)
         return response.text

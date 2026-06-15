@@ -414,12 +414,32 @@ async def _create_ticket_for_customer(customer_id: str, subject: str) -> Ticket:
 @app.get("/my/profile")
 async def my_profile(user: dict = Depends(get_current_user)):
     email = user.get("email", "")
-    customer = await _get_customer_by_email(email)
-    if customer is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Customer profile not found — contact support",
-        )
+    full_name = user.get("full_name") or email.split("@")[0]
+
+    if USE_MOCK:
+        from dev.mock_repository import CUSTOMERS
+
+        for c in CUSTOMERS:
+            if c["email"] == email:
+                return Customer(**c)
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    from repositories.customer_repository import get_or_create_customer_profile
+
+    logger.info(
+        "/my/profile | email=%s | full_name=%s | user_id=%s",
+        email,
+        full_name,
+        user.get("user_id", "?"),
+    )
+
+    customer = await get_or_create_customer_profile(email=email, name=full_name)
+
+    logger.info(
+        "/my/profile returning | customer_id=%s | email=%s",
+        customer.id,
+        customer.email,
+    )
     return customer
 
 
@@ -428,16 +448,30 @@ async def setup_my_profile(user: dict = Depends(get_current_user)):
     """
     Create a customer profile for the authenticated user if one doesn't exist.
     Called by frontend after signup/email verification.
+    Idempotent — uses get_or_create_customer_profile internally.
     """
     email = user.get("email", "")
-
-    existing = await _get_customer_by_email(email)
-    if existing:
-        return existing
-
     full_name = user.get("full_name") or email.split("@")[0]
-    req = CreateCustomerRequest(name=full_name, email=email)
-    customer = await create_customer(req)
+
+    if USE_MOCK:
+        from dev.mock_repository import CUSTOMERS
+
+        for c in CUSTOMERS:
+            if c["email"] == email:
+                return Customer(**c)
+        req = CreateCustomerRequest(name=full_name, email=email)
+        return await create_customer(req)
+
+    from repositories.customer_repository import get_or_create_customer_profile
+
+    logger.info(
+        "/my/setup-profile | email=%s | full_name=%s | user_id=%s",
+        email,
+        full_name,
+        user.get("user_id", "?"),
+    )
+
+    customer = await get_or_create_customer_profile(email=email, name=full_name)
 
     # Seed Hindsight memory bank on first profile creation
     try:
@@ -453,7 +487,7 @@ async def setup_my_profile(user: dict = Depends(get_current_user)):
         )
 
     logger.info(
-        "Customer profile auto-created | customer_id=%s | email=%s",
+        "Customer profile ready | customer_id=%s | email=%s",
         customer.id,
         email,
     )
