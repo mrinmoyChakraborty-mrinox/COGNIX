@@ -106,6 +106,9 @@ function handleWsEvent(msg) {
       if (msg.escalation_flag) {
         showEscalationBanner(msg.escalation_reason);
       }
+      if (msg.memory_summary) {
+        addSessionNote(msg.memory_summary);
+      }
       break;
   }
 }
@@ -368,12 +371,246 @@ async function wireResolveButton() {
   });
 }
 
+async function loadSidebarMemories() {
+  const el = document.getElementById("sidebarFacts");
+  if (!el || !CUSTOMER_ID) return;
+
+  el.innerHTML = `
+    <div class="section-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/>
+        <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/>
+        <path d="M18 18a4 4 0 0 0 2-7.464"/>
+        <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/>
+        <path d="M6 18a4 4 0 0 1-2-7.464"/>
+        <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/>
+      </svg>
+      <span>Known Facts</span>
+    </div>
+    <div class="sidebar-skeleton">
+      <div class="skeleton-line w-70"></div>
+      <div class="skeleton-line w-50"></div>
+      <div class="skeleton-line w-65"></div>
+    </div>
+  `;
+
+  try {
+    const token = await getToken();
+    const headers = { "Accept": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/customers/${CUSTOMER_ID}/memories`, { headers });
+    if (!res.ok) throw new Error(res.status);
+    const memories = await res.json();
+
+    // Remove skeleton
+    const skeleton = el.querySelector(".sidebar-skeleton");
+    if (skeleton) skeleton.remove();
+
+    if (!memories.length) {
+      el.innerHTML += `<p class="sidebar-empty">No facts stored yet. Facts will appear as the conversation progresses.</p>`;
+      return;
+    }
+
+    const groups = {
+      experience:  { label: "Experiences",   icon: "clock",  items: [] },
+      observation: { label: "Observations",  icon: "eye",    items: [] },
+      world_fact:  { label: "Known Facts",   icon: "info",   items: [] },
+    };
+
+    for (const m of memories) {
+      const key = m.memory_type in groups ? m.memory_type : "world_fact";
+      groups[key].items.push(m);
+    }
+
+    const MAX_VISIBLE = 4;
+    for (const key of ["experience", "observation", "world_fact"]) {
+      const g = groups[key];
+      if (!g.items.length) continue;
+
+      const showMore = g.items.length > MAX_VISIBLE;
+
+      let html = `<div class="fact-group">
+        <div class="fact-group-header">
+          <span class="fact-group-label">${g.label}</span>
+          <span class="fact-group-count">${g.items.length}</span>
+        </div>`;
+
+      const visible = g.items.slice(0, MAX_VISIBLE);
+      for (const item of visible) {
+        html += `<div class="fact-item">
+          <div class="fact-dot fact-dot--${item.memory_type}"></div>
+          <p class="fact-content">${escapeHtml(item.content)}</p>
+        </div>`;
+      }
+
+      if (showMore) {
+        const extra = g.items.length - MAX_VISIBLE;
+        html += `<button class="fact-show-more" data-key="${key}">+ ${extra} more</button>`;
+      }
+
+      html += `</div>`;
+      el.insertAdjacentHTML("beforeend", html);
+    }
+
+    // Wire expand buttons
+    el.querySelectorAll(".fact-show-more").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.key;
+        const group = groups[key];
+        if (!group) return;
+        btn.remove();
+        const extra = group.items.slice(MAX_VISIBLE);
+        const parent = btn.closest(".fact-group");
+        for (const item of extra) {
+          parent.insertAdjacentHTML("beforeend", `<div class="fact-item">
+            <div class="fact-dot fact-dot--${item.memory_type}"></div>
+            <p class="fact-content">${escapeHtml(item.content)}</p>
+          </div>`);
+        }
+      });
+    });
+
+  } catch {
+    const skeleton = el.querySelector(".sidebar-skeleton");
+    if (skeleton) skeleton.remove();
+    el.innerHTML += `<p class="sidebar-empty sidebar-error">Could not load facts.</p>`;
+  }
+}
+
+async function loadSidebarTimeline() {
+  const el = document.getElementById("sidebarTimeline");
+  if (!el || !CUSTOMER_ID) return;
+
+  el.innerHTML = `
+    <div class="section-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+      <span>Issue History</span>
+    </div>
+    <div class="sidebar-skeleton">
+      <div class="skeleton-line w-60"></div>
+      <div class="skeleton-line w-45"></div>
+    </div>
+  `;
+
+  try {
+    const token = await getToken();
+    const headers = { "Accept": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/customers/${CUSTOMER_ID}/tickets`, { headers });
+    if (!res.ok) throw new Error(res.status);
+    const tickets = await res.json();
+
+    const skeleton = el.querySelector(".sidebar-skeleton");
+    if (skeleton) skeleton.remove();
+
+    if (!tickets.length) {
+      el.innerHTML += `<p class="sidebar-empty">No tickets yet.</p>`;
+      return;
+    }
+
+    const sorted = [...tickets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const MAX_VISIBLE = 5;
+    const showMore = sorted.length > MAX_VISIBLE;
+    const visible = sorted.slice(0, MAX_VISIBLE);
+
+    let html = `<div class="timeline-list">`;
+    for (const t of visible) {
+      const date = new Date(t.created_at);
+      const month = date.toLocaleString("en-US", { month: "short" });
+      html += `<div class="timeline-item">
+        <div class="timeline-dot timeline-dot--${t.status}"></div>
+        <div class="timeline-body">
+          <span class="timeline-date">${month} ${date.getDate()}</span>
+          <p class="timeline-subject">${escapeHtml(t.subject)}</p>
+          <span class="status-pill status-${t.status}">${t.status}</span>
+        </div>
+      </div>`;
+    }
+    if (showMore) {
+      html += `<button class="fact-show-more timeline-show-more">+ ${sorted.length - MAX_VISIBLE} more</button>`;
+    }
+    html += `</div>`;
+    el.insertAdjacentHTML("beforeend", html);
+
+    // Wire expand
+    const expandBtn = el.querySelector(".timeline-show-more");
+    if (expandBtn) {
+      expandBtn.addEventListener("click", () => {
+        expandBtn.remove();
+        const extra = sorted.slice(MAX_VISIBLE);
+        const list = el.querySelector(".timeline-list");
+        for (const t of extra) {
+          const date = new Date(t.created_at);
+          const month = date.toLocaleString("en-US", { month: "short" });
+          list.insertAdjacentHTML("beforeend", `<div class="timeline-item">
+            <div class="timeline-dot timeline-dot--${t.status}"></div>
+            <div class="timeline-body">
+              <span class="timeline-date">${month} ${date.getDate()}</span>
+              <p class="timeline-subject">${escapeHtml(t.subject)}</p>
+              <span class="status-pill status-${t.status}">${t.status}</span>
+            </div>
+          </div>`);
+        }
+      });
+    }
+
+  } catch {
+    const skeleton = el.querySelector(".sidebar-skeleton");
+    if (skeleton) skeleton.remove();
+    el.innerHTML += `<p class="sidebar-empty sidebar-error">Could not load history.</p>`;
+  }
+}
+
+function initSessionNotes() {
+  const el = document.getElementById("sidebarSessionNotes");
+  if (!el) return;
+  el.innerHTML = `
+    <div class="section-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/>
+        <path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"/>
+      </svg>
+      <span>Session Notes</span>
+    </div>
+    <div id="sessionNotesList" class="session-notes-list">
+      <p class="sidebar-empty">Notes will appear as the conversation progresses...</p>
+    </div>
+  `;
+}
+
+function addSessionNote(text) {
+  const list = document.getElementById("sessionNotesList");
+  if (!list) return;
+
+  const placeholder = list.querySelector(".sidebar-empty");
+  if (placeholder) placeholder.remove();
+
+  const note = document.createElement("div");
+  note.className = "session-note";
+  note.style.cssText = "opacity:0;transform:translateY(4px);transition:opacity 0.3s,transform 0.3s";
+  note.innerHTML = `
+    <span class="bullet bullet-primary">·</span>
+    <span class="session-note-text">${escapeHtml(text)}</span>
+  `;
+  list.appendChild(note);
+  requestAnimationFrame(() => {
+    note.style.opacity = "1";
+    note.style.transform = "translateY(0)";
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   renderMemoryIdle();
+  initSessionNotes();
   await loadAgent();
   await initProfile();
   wireSend();
   wireAiSuggest();
   connectWebSocket();
   wireResolveButton();
+  await loadSidebarMemories();
+  await loadSidebarTimeline();
 });

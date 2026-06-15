@@ -283,9 +283,9 @@ async def generate_response(
     memories: list[MemoryEntry],
     message: str,
     reflection: str,
-) -> tuple[str, str | None]:
+) -> tuple[str, str | None, str]:
     result = await generate_support_response(customer, memories, message, reflection)
-    return result.response, result.suggested_solution
+    return result.response, result.suggested_solution, result.memory_summary
 
 
 # ── Public API ───────────────────────────────────────────────

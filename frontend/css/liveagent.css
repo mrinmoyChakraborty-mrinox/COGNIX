@@ -962,3 +962,192 @@ svg {
 .memory-hits {
   padding: 0 12px 12px;
 }
+
+/* ====================================================================
+   SIDEBAR DYNAMIC SECTIONS
+   ==================================================================== */
+
+.sidebar-skeleton {
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--color-input) 25%, var(--color-border) 50%, var(--color-input) 75%);
+  background-size: 200% 100%;
+  animation: shimmerSlide 1.4s infinite;
+}
+.skeleton-line.w-70 { width: 70%; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-50 { width: 50%; }
+.skeleton-line.w-45 { width: 45%; }
+.skeleton-line.w-65 { width: 65%; }
+
+@keyframes shimmerSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.sidebar-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+
+.sidebar-error { color: #ef4444; }
+
+/* ── Fact groups ─────────────────────────────────── */
+
+.fact-group { padding: 0 12px 8px; }
+
+.fact-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.fact-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted-foreground);
+}
+
+.fact-group-count {
+  font-size: 10px;
+  background: var(--color-input);
+  color: var(--color-muted-foreground);
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+
+.fact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.fact-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.fact-dot--experience  { background: #3b82f6; }
+.fact-dot--observation { background: #a855f7; }
+.fact-dot--world_fact  { background: #22c55e; }
+
+.fact-content {
+  font-size: 12px;
+  color: var(--color-foreground);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.fact-show-more {
+  font-size: 11px;
+  color: var(--color-primary, #6366f1);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: 2px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Timeline ────────────────────────────────────── */
+
+.timeline-list { padding: 4px 12px 8px; }
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 0;
+  position: relative;
+}
+
+.timeline-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  bottom: -5px;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.timeline-dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 3px;
+  border: 2px solid var(--color-card, #fff);
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.timeline-dot--resolved  { background: #22c55e; color: #22c55e; }
+.timeline-dot--open      { background: #f59e0b; color: #f59e0b; }
+.timeline-dot--escalated { background: #ef4444; color: #ef4444; }
+
+.timeline-body { flex: 1; min-width: 0; }
+
+.timeline-date {
+  font-size: 10px;
+  color: var(--color-muted-foreground);
+  font-weight: 500;
+}
+
+.timeline-subject {
+  font-size: 12px;
+  color: var(--color-foreground);
+  margin: 2px 0 3px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.status-resolved  { background: #dcfce7; color: #15803d; }
+.status-open      { background: #fef9c3; color: #854d0e; }
+.status-escalated { background: #fee2e2; color: #991b1b; }
+
+/* ── Session notes ───────────────────────────────── */
+
+.session-notes-list {
+  padding: 4px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.session-note-text {
+  font-size: 12px;
+  color: var(--color-foreground);
+  line-height: 1.45;
+}

@@ -285,7 +285,7 @@ async def support_chat(req: SupportRequest, _: dict = Depends(require_admin)):
     memories, _ = await retrieve_memories(req.customer_id, req.message)
     reflection = await reflect(req.customer_id, req.message)
 
-    response_text, suggested_solution = await generate_response(
+    response_text, suggested_solution, _ = await generate_response(
         customer, memories, req.message, reflection
     )
 
@@ -320,7 +320,7 @@ async def customer_chat(req: ChatRequest, user: dict = Depends(get_current_user)
     await ensure_bank(req.customer_id, customer.name)
     memories, _ = await retrieve_memories(req.customer_id, req.message)
     reflection = await reflect(req.customer_id, req.message)
-    response_text, suggested_solution = await generate_response(
+    response_text, suggested_solution, _ = await generate_response(
         customer, memories, req.message, reflection
     )
     await save_memory(
@@ -491,7 +491,7 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     memories, _ = await retrieve_memories(customer.id, req.message)
     reflection = await reflect(customer.id, req.message)
 
-    response_text, suggested_solution = await generate_response(
+    response_text, suggested_solution, memory_summary = await generate_response(
         customer, memories, req.message, reflection
     )
 
@@ -598,7 +598,7 @@ async def websocket_session(
             reflection = await reflect(customer_id, message)
 
             # 4. Generate LLM response
-            response_text, suggested_solution = await generate_response(
+            response_text, suggested_solution, memory_summary = await generate_response(
                 customer, memories, message, reflection
             )
 
@@ -622,6 +622,7 @@ async def websocket_session(
                     "suggested_solution": suggested_solution,
                     "escalation_flag": escalation_flag,
                     "frustration_score": frustration_score,
+                    "memory_summary": memory_summary,
                 }
             )
 
