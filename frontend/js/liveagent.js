@@ -111,12 +111,12 @@ function handleWsEvent(msg) {
 }
 
 function sendMessage() {
-  const text = replyInput.value.trim();
+  const text = replyInput.textContent.trim();
   if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
 
   appendMessage("user", text);
   socket.send(text);
-  replyInput.value = "";
+  replyInput.textContent = "";
   replyInput.focus();
 }
 
@@ -157,47 +157,85 @@ function showTypingIndicator(show) {
 
 function showMemoryScanning(query) {
   if (!memoryPanel) return;
+  const escaped = escapeHtml(query);
   memoryPanel.innerHTML = `
     <div class="section-header">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
       <span>Memory Retrieval</span>
     </div>
-    <div class="scanning-text" style="padding:12px;text-align:center;color:var(--color-muted-foreground);font-size:13px;">Searching memory bank...</div>
-    ${query ? `<div style="padding:0 12px 12px;font-size:12px;color:var(--color-muted-foreground)">Query: <code style="background:var(--color-input);padding:1px 6px;border-radius:4px">${escapeHtml(query)}</code></div>` : ""}
+    <div class="memory-scanning">
+      <div class="memory-query-pill">Query: <code>"${escaped}"</code></div>
+      <div class="scanning-dots">
+        <div class="scanning-dot"></div>
+        <div class="scanning-dot"></div>
+        <div class="scanning-dot"></div>
+      </div>
+      <span class="scanning-label">Searching memory bank...</span>
+    </div>
   `;
+  const dots = memoryPanel.querySelectorAll(".scanning-dot");
+  let frame = 0;
+  const interval = setInterval(() => {
+    dots.forEach((d, i) => d.classList.toggle("active", i === frame % 3));
+    frame++;
+  }, 200);
+  memoryPanel._scanInterval = interval;
 }
 
 function renderMemoryViz(msg) {
   if (!memoryPanel) return;
+  if (memoryPanel._scanInterval) {
+    clearInterval(memoryPanel._scanInterval);
+    delete memoryPanel._scanInterval;
+  }
+
   const hits = msg.hits || [];
   const TYPE_LABELS = { world_fact: "Fact", experience: "Experience", observation: "Observation" };
+  const TYPE_CLASSES = { world_fact: "world_fact", experience: "experience", observation: "observation" };
+  const query = escapeHtml(msg.query || "");
+  const ms = msg.retrieval_time_ms || 0;
 
   memoryPanel.innerHTML = `
     <div class="section-header">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
       <span>Memory Retrieval</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--color-muted-foreground)">${msg.retrieval_time_ms || 0}ms</span>
+      <span class="memory-ms">${ms}ms</span>
     </div>
-    <div style="padding:0 12px 8px;font-size:12px;color:var(--color-muted-foreground)">Query: <code style="background:var(--color-input);padding:1px 6px;border-radius:4px">${escapeHtml(msg.query || "")}</code></div>
-    <div class="memory-hits" id="memoryHits" style="padding:0 12px 12px"></div>
-    <div style="padding:8px 12px;border-top:1px solid var(--color-border);font-size:11px;color:var(--color-muted-foreground);text-align:center">${hits.length} memories retrieved</div>
+    <div class="memory-query-pill">Query: <code>"${query}"</code></div>
+    <div class="memory-hits" id="memoryHits"></div>
+    <div class="memory-footer">${hits.length} memories retrieved · ${ms}ms</div>
   `;
 
   const container = document.getElementById("memoryHits");
   hits.forEach((hit, i) => {
     const el = document.createElement("div");
     el.className = "memory-hit";
-    el.style.cssText = "display:flex;align-items:flex-start;gap:8px;padding:6px 0;opacity:0;transition:opacity 0.3s";
     el.innerHTML = `
-      <span style="color:var(--color-success);font-size:12px;flex-shrink:0">✓</span>
+      <div class="memory-hit-check">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
       <div>
-        <p style="font-size:12px;color:var(--color-foreground);margin:0">${escapeHtml(hit.content)}</p>
-        <span style="font-size:10px;color:var(--color-muted-foreground)">${TYPE_LABELS[hit.memory_type] || "Memory"}</span>
+        <p class="memory-hit-content">${escapeHtml(hit.content)}</p>
+        <span class="memory-type-badge ${TYPE_CLASSES[hit.memory_type] || ""}">${TYPE_LABELS[hit.memory_type] || "Memory"}</span>
       </div>
     `;
     container.appendChild(el);
-    setTimeout(() => el.style.opacity = "1", 200 + i * 150);
+    setTimeout(() => el.classList.add("visible"), 200 + i * 150);
   });
+}
+
+function renderMemoryIdle() {
+  if (!memoryPanel) return;
+  memoryPanel.innerHTML = `
+    <div class="section-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
+      <span>Memory Retrieval</span>
+    </div>
+    <div class="memory-idle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
+      <p>Waiting for customer message...</p>
+    </div>
+  `;
 }
 
 function showEscalationBanner(reason) {
@@ -218,8 +256,13 @@ function wireAiSuggest() {
     aiSuggestBtn.classList.add("is-loading");
     aiSuggestBtn.disabled = true;
     setTimeout(() => {
-      replyInput.value = suggestion;
+      replyInput.textContent = suggestion;
       replyInput.focus();
+      const range = document.createRange();
+      range.selectNodeContents(replyInput);
+      range.collapse(false);
+      window.getSelection()?.removeAllRanges();
+      window.getSelection()?.addRange(range);
       aiSuggestBtn.classList.remove("is-loading");
       aiSuggestBtn.disabled = false;
     }, 400);
@@ -233,6 +276,8 @@ function wireSend() {
       sendMessage();
     }
   });
+
+  document.getElementById("sendBtn")?.addEventListener("click", sendMessage);
 }
 
 function escapeHtml(str) {
@@ -316,6 +361,7 @@ async function wireResolveButton() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  renderMemoryIdle();
   await loadAgent();
   await initProfile();
   wireSend();

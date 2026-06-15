@@ -810,3 +810,148 @@ svg {
 .memory-delta-save.saved {
   background-color: var(--color-success);
 }
+
+/* ====================================================================
+   MEMORY RETRIEVAL VISUALIZATION (three states)
+   ==================================================================== */
+
+.memory-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 12px;
+  color: var(--color-muted-foreground);
+}
+
+.memory-idle svg {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 8px;
+  opacity: 0.4;
+}
+
+.memory-idle p {
+  font-size: 12px;
+  margin: 0;
+  text-align: center;
+}
+
+.memory-scanning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  gap: 12px;
+}
+
+.memory-query-pill {
+  display: inline-block;
+  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  background: var(--color-input);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--color-muted-foreground);
+}
+
+.memory-query-pill code {
+  background: transparent;
+  padding: 0;
+}
+
+.scanning-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.scanning-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-muted-foreground);
+  opacity: 0.3;
+  transition: opacity 0.15s ease;
+}
+
+.scanning-dot.active {
+  opacity: 1;
+}
+
+.memory-hits {
+  padding: 0 12px 12px;
+}
+
+.memory-hit {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.memory-hit.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.memory-hit-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.memory-hit-content {
+  font-size: 13px;
+  color: var(--color-foreground);
+  margin: 0 0 2px 0;
+  line-height: 1.4;
+}
+
+.memory-type-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+
+.memory-type-badge.experience {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.memory-type-badge.world_fact {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.memory-type-badge.observation {
+  background: #faf5ff;
+  color: #7e22ce;
+  border-color: #e9d5ff;
+}
+
+.memory-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  text-align: center;
+  color: var(--color-muted-foreground);
+}
+
+.memory-ms {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-muted-foreground);
+}

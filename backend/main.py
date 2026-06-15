@@ -536,28 +536,29 @@ async def websocket_session(
         )
 
     # ── Opening message ──────────────────────────────────────
-    # Humble greeting: signal that memory is loaded without being creepy.
-    # The wow moment comes AFTER the customer types their first message.
+    # Agent briefing: reconstruct the full support history from Hindsight
+    # so the agent sees synthesized context before the customer types.
     opening_reflection = await reflect(
         customer_id,
-        "Briefly summarise this customer's most recent unresolved issue or concern "
-        "in one sentence. If nothing is unresolved, say so.",
+        "Summarise this customer's full support history in 3-4 sentences. "
+        "Include: what issues they've had, what was tried, what worked, "
+        "and what might still be unresolved. Write it as a briefing for "
+        "a support agent who is about to start a live session with this customer.",
     )
 
     if opening_reflection:
         opening_text = (
-            f"Welcome back, {customer.name}.\n\n"
-            "I have access to your previous support history and can help "
-            "without you needing to repeat details.\n\n"
-            f"Quick note from your history: {opening_reflection}\n\n"
-            "How can I help you today?"
+            f"📋 Agent briefing for {customer.name}\n\n"
+            f"{opening_reflection}\n\n"
+            "──────────────────────\n"
+            "Customer is now connected. Waiting for their message."
         )
     else:
         opening_text = (
-            f"Welcome back, {customer.name}.\n\n"
-            "I have access to your previous support history and can help "
-            "without you needing to repeat details.\n\n"
-            "How can I help you today?"
+            f"📋 New session with {customer.name}\n\n"
+            "No prior history found in memory.\n\n"
+            "──────────────────────\n"
+            "Customer is now connected. Waiting for their message."
         )
 
     await websocket.send_json({"event": "opening", "data": opening_text})
