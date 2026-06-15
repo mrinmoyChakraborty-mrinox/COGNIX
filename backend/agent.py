@@ -312,7 +312,7 @@ async def generate_support_response(
     prompt = _build_prompt(customer, memories, message, reflection)
 
     try:
-        result = await _agent.run(prompt)
+        result = await _get_agent().run(prompt)
         output = result.output
 
         # Clamp frustration score in case the model drifts outside bounds
