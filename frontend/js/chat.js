@@ -43,16 +43,52 @@ async function apiFetch(path, opts = {}) {
   return res;
 }
 
+async function showFailure(profileStatus, profileBody, setupStatus, setupBody) {
+  const el = $("errorDetail");
+  if (!el) return;
+  const lines = [
+    `GET /my/profile → ${profileStatus}`,
+    `  body: ${profileBody}`,
+    `POST /my/setup-profile → ${setupStatus}`,
+    `  body: ${setupBody}`,
+    `API_BASE: ${API_BASE}`,
+  ];
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    lines.push(`session.active: ${!!session?.access_token}`);
+    if (session?.access_token) {
+      lines.push(`token.prefix: ${session.access_token.substring(0, 12)}...`);
+    }
+  } catch (_) {
+    lines.push("session: error reading");
+  }
+
+  lines.push(""); // trailing blank
+  el.textContent = lines.join("\n");
+}
+
 async function loadProfile() {
-  // /my/profile now auto-creates the profile if it doesn't exist.
-  // It never returns 404 for a valid authenticated user.
   let res = await apiFetch("/my/profile");
   if (!res.ok) {
-    // Fallback: try setup-profile explicitly (legacy path)
+    let profileBody = "?";
+    try { profileBody = JSON.stringify(await res.json()); } catch (_) { profileBody = await res.text().catch(() => "?"); }
+
     const setupRes = await apiFetch("/my/setup-profile", { method: "POST" });
+    let setupBody = "?";
+    try { setupBody = JSON.stringify(await setupRes.json()); } catch (_) { setupBody = await setupRes.text().catch(() => "?"); }
+
+    console.error("loadProfile failed", {
+      profileStatus: res.status,
+      profileBody,
+      setupStatus: setupRes.status,
+      setupBody,
+    });
+
     if (setupRes.ok) {
       res = await apiFetch("/my/profile");
     } else {
+      showFailure(res.status, profileBody, setupRes.status, setupBody);
       $("chatLayout").classList.add("hidden");
       $("errorScreen").classList.remove("hidden");
       return null;
@@ -111,6 +147,8 @@ async function init() {
 
   } catch (err) {
     console.error("Init failed:", err);
+    const el = $("errorDetail");
+    if (el) el.textContent = `Error: ${err.message || err}\n\nCheck the browser console (F12) for full details.`;
     $("chatLayout").classList.add("hidden");
     $("errorScreen").classList.remove("hidden");
   }

@@ -53,8 +53,12 @@ function setLoading(loading) {
 async function ensureCustomerProfile() {
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session?.access_token) return;
+    if (!session?.access_token) {
+      console.warn("ensureCustomerProfile: no session token");
+      return;
+    }
     
+    const start = Date.now();
     const response = await fetch(`${window.CONFIG.API_BASE}/my/setup-profile`, {
       method: "POST",
       headers: {
@@ -62,12 +66,21 @@ async function ensureCustomerProfile() {
         "Content-Type": "application/json"
       }
     });
-    
+    const elapsed = Date.now() - start;
+
+    let body = "?";
+    try { body = JSON.stringify(await response.json()); } catch (_) { body = await response.text().catch(() => "?"); }
+
+    console.log(`ensureCustomerProfile | POST /my/setup-profile → ${response.status} (${elapsed}ms)`, body);
+
     if (!response.ok) {
-      console.warn("Failed to setup customer profile:", response.status);
+      console.warn("ensureCustomerProfile: POST /my/setup-profile returned error", {
+        status: response.status,
+        body,
+      });
     }
   } catch (e) {
-    console.warn("Error setting up customer profile:", e);
+    console.warn("ensureCustomerProfile threw:", e);
   }
 }
 

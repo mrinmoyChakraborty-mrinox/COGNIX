@@ -530,6 +530,55 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     return MyChatResponse(reply=response_text, suggested_solution=suggested_solution)
 
 
+# ── Debug / Diagnostics ──────────────────────────────────────
+
+
+@app.get("/debug/me")
+async def debug_me(user: dict = Depends(get_current_user)):
+    """
+    Diagnostic endpoint: returns the authenticated user, Supabase client status,
+    and the resolved customer profile. Does NOT throw on failure — returns errors inline.
+    """
+    result = {
+        "user": {
+            "user_id": user.get("user_id", "?"),
+            "email": user.get("email", ""),
+            "role": user.get("role", "?"),
+            "full_name": user.get("full_name", "?"),
+        },
+        "supabase": {
+            "url_configured": bool(os.getenv("SUPABASE_URL")),
+            "key_configured": bool(os.getenv("SUPABASE_KEY")),
+        },
+        "customer": None,
+        "error": None,
+    }
+
+    try:
+        customer = await _resolve_customer(user)
+        result["customer"] = customer.model_dump() if customer else None
+    except Exception as exc:
+        logger.error("debug_me _resolve_customer failed", exc_info=True)
+        result["error"] = f"{type(exc).__name__}: {exc}"
+
+        # Fallback: try a raw client query to isolate the issue
+        try:
+            from repositories.customer_repository import _get_client
+
+            client = await _get_client()
+            fallback = (
+                await client.table("customers")
+                .select("count(*)", count="exact")
+                .execute()
+            )
+            result["supabase"]["raw_query"] = "ok"
+            result["supabase"]["row_count"] = getattr(fallback, "count", None)
+        except Exception as exc2:
+            result["supabase"]["raw_query"] = f"failed: {exc2}"
+
+    return result
+
+
 # ── WebSocket ────────────────────────────────────────────────
 
 
