@@ -301,7 +301,9 @@ async def get_all_memories(customer_id: str) -> list[MemoryEntry]:
     await ensure_bank(customer_id)
 
     try:
-        result = await client.alist_memories(bank_id=customer_id, limit=200, offset=0)
+        result = await client.memory.list_memories(
+            bank_id=customer_id, limit=200, offset=0
+        )
 
         memories: list[MemoryEntry] = []
         for m in result.items:
