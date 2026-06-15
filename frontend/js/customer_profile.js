@@ -5,23 +5,48 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 const params = new URLSearchParams(window.location.search);
 const CUSTOMER_ID = params.get('customer_id');
 
+// Replace the init() IIFE:
 (async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session || session.user.email !== ADMIN_EMAIL) {
     window.location.href = "./chat.html";
     return;
   }
+
   if (!CUSTOMER_ID) {
-    showError('No customer selected.');
+    // No customer_id — redirect to first customer
+    try {
+      const { data: { session: s } } = 
+        await supabaseClient.auth.getSession();
+      const headers = { "Accept": "application/json" };
+      if (s?.access_token) 
+        headers["Authorization"] = `Bearer ${s.access_token}`;
+      const res = await fetch(`${API_BASE}/customers`, { headers });
+      if (res.ok) {
+        const customers = await res.json();
+        if (customers && customers.length > 0) {
+          window.location.href = 
+            `./customer_profile.html?customer_id=${customers[0].id}`;
+          return;
+        }
+      }
+    } catch (_) {}
+    showError('No customer selected. Go to the dashboard and click a customer.');
     return;
   }
+
+  // Show skeletons while loading
   showSkeleton(true);
+
   try {
     const [customer, tickets, memories] = await Promise.all([
       fetchJSON(`/customers/${CUSTOMER_ID}`),
       fetchJSON(`/customers/${CUSTOMER_ID}/tickets`),
       fetchJSON(`/customers/${CUSTOMER_ID}/memories`),
     ]);
+
+    // Hide skeletons before populating
+    showSkeleton(false);
 
     populateHeader(customer);
     populateKPIs(customer, tickets);
@@ -33,11 +58,14 @@ const CUSTOMER_ID = params.get('customer_id');
     populateFrustrations(memories);
     wireBackBtn();
     wireStartSession();
+
   } catch (err) {
     console.error('Failed to load customer profile:', err);
-    showError('Could not connect to the backend. Make sure the API server is running.');
-  } finally {
     showSkeleton(false);
+    showError(
+      'Could not load customer data. ' +
+      (err.message || 'Check the API server is running.')
+    );
   }
 })();
 
@@ -217,16 +245,59 @@ function populateFrustrations(memories) {
     : '<div class="body-text text-muted-foreground">No known frustrations.</div>';
 }
 
+// Replace showSkeleton() entirely:
 function showSkeleton(show) {
-  document.querySelectorAll('.skeleton').forEach(el => el.classList.toggle('hidden', !show));
-  document.querySelectorAll('.skeleton-target').forEach(el => el.classList.toggle('hidden', show));
+  document.querySelectorAll('.skeleton').forEach(el => {
+    el.style.display = show ? '' : 'none';
+  });
+  document.querySelectorAll('.skeleton-target').forEach(el => {
+    el.style.display = show ? 'none' : '';
+  });
 }
 
+// Replace showError():
 function showError(msg) {
-  showSkeleton(false);
-  const target = document.querySelector('.skeleton-target');
-  if (target) {
-    target.innerHTML = `<div class="card-base text-center py-10"><div class="text-muted-foreground text-base">⚠ ${escapeHtml(msg)}</div></div>`;
+  // Force hide skeletons regardless of state
+  document.querySelectorAll('.skeleton').forEach(el => {
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('.skeleton-target').forEach(el => {
+    el.style.display = '';
+  });
+
+  // Try multiple containers to show error
+  const targets = [
+    document.getElementById('timeline-container'),
+    document.getElementById('memory-graph-container'),
+    document.querySelector('.skeleton-target'),
+    document.querySelector('main'),
+    document.body,
+  ];
+
+  const errorHtml = `
+    <div style="padding:32px;text-align:center;
+                color:var(--color-muted-foreground,#6b7280)">
+      <div style="font-size:32px;margin-bottom:12px">⚠</div>
+      <div style="font-size:15px;font-weight:500;
+                  color:var(--color-foreground,#111);
+                  margin-bottom:6px">
+        Failed to load
+      </div>
+      <div style="font-size:13px">${escapeHtml(msg)}</div>
+      <button onclick="window.history.back()"
+        style="margin-top:16px;padding:8px 16px;
+               border-radius:8px;border:none;cursor:pointer;
+               background:var(--color-primary,#6366f1);
+               color:white;font-size:13px">
+        ← Go back
+      </button>
+    </div>`;
+
+  for (const el of targets) {
+    if (el) {
+      el.innerHTML = errorHtml;
+      break;
+    }
   }
 }
 
