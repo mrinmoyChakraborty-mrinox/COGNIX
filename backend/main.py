@@ -111,6 +111,48 @@ from agent import generate_response, generate_support_response
 from auth import get_current_user, get_supabase_client, require_admin, verify_ws_token
 
 
+# ── Session Manager ─────────────────────────────────────────
+# Tracks active agent WebSocket sessions and pending customer replies.
+
+
+class SessionManager:
+    """In-memory session state. One agent WebSocket per customer_id."""
+
+    def __init__(self):
+        self._sessions: dict[str, dict] = {}
+        self._pending_replies: dict[str, list[dict]] = {}
+
+    def register(self, customer_id: str, websocket: WebSocket) -> None:
+        self._sessions[customer_id] = {
+            "websocket": websocket,
+            "agent_id": "admin",
+            "started_at": datetime.now(timezone.utc),
+        }
+        logger.info("Session registered | customer_id=%s", customer_id)
+
+    def unregister(self, customer_id: str) -> None:
+        self._sessions.pop(customer_id, None)
+        logger.info("Session unregistered | customer_id=%s", customer_id)
+
+    def is_agent_connected(self, customer_id: str) -> bool:
+        return customer_id in self._sessions
+
+    def get_agent_ws(self, customer_id: str) -> WebSocket | None:
+        s = self._sessions.get(customer_id)
+        return s["websocket"] if s else None
+
+    def add_pending_reply(self, customer_id: str, reply: dict) -> None:
+        if customer_id not in self._pending_replies:
+            self._pending_replies[customer_id] = []
+        self._pending_replies[customer_id].append(reply)
+
+    def pop_pending_replies(self, customer_id: str) -> list[dict]:
+        return self._pending_replies.pop(customer_id, [])
+
+
+sessions = SessionManager()
+
+
 # ── startup / shutdown ───────────────────────────────────────
 
 REQUIRED_ENV_VARS = [
@@ -527,17 +569,60 @@ async def my_chat(req: MyChatRequest, user: dict = Depends(get_current_user)):
     reflection = await reflect(customer.id, req.message)
 
     customer_tickets = await get_tickets(customer.id)
-    response_text, suggested_solution, memory_summary = await generate_response(
+    result = await generate_support_response(
         customer, memories, req.message, reflection, tickets=customer_tickets
     )
 
     await save_memory(
         customer.id,
-        f'Customer: "{req.message[:120]}". Agent: "{response_text[:120]}".',
+        f'Customer: "{req.message[:120]}". Agent: "{result.response[:120]}".',
         "support session",
     )
 
-    return MyChatResponse(reply=response_text, suggested_solution=suggested_solution)
+    agent_ws = sessions.get_agent_ws(customer.id)
+    agent_connected = agent_ws is not None
+
+    if agent_connected:
+        # Push customer message + AI suggestion to live agent
+        try:
+            await agent_ws.send_json(
+                {
+                    "event": "chat.reply",
+                    "data": req.message,
+                    "suggested_reply": result.response,
+                    "suggested_solution": result.suggested_solution,
+                    "escalation_flag": result.escalation_flag,
+                    "escalation_reason": result.escalation_reason,
+                    "frustration_score": result.frustration_score,
+                    "memory_summary": result.memory_summary,
+                }
+            )
+        except Exception:
+            logger.warning("Failed to push to agent WS | customer_id=%s", customer.id)
+
+        # Check for pending agent replies
+        pending = sessions.pop_pending_replies(customer.id)
+        agent_reply = pending[-1]["text"] if pending else None
+
+        return MyChatResponse(
+            reply=agent_reply or "An agent is reviewing your message.",
+            suggested_solution=result.suggested_solution,
+            agent_connected=True,
+        )
+
+    # No agent connected — return AI reply directly
+    return MyChatResponse(
+        reply=result.response, suggested_solution=result.suggested_solution
+    )
+
+
+@app.get("/my/pending-replies")
+async def my_pending_replies(user: dict = Depends(get_current_user)):
+    """Customer polls this to receive agent replies in real time."""
+    customer = await _resolve_customer(user)
+    agent_connected = sessions.is_agent_connected(customer.id)
+    replies = sessions.pop_pending_replies(customer.id)
+    return {"replies": replies, "agent_disconnected": not agent_connected}
 
 
 # ── Debug / Diagnostics ──────────────────────────────────────
@@ -620,6 +705,9 @@ async def websocket_session(
             customer_id,
         )
 
+    # Register session so customer messages route here
+    sessions.register(customer_id, websocket)
+
     # ── Opening message ──────────────────────────────────────
     # Agent briefing: reconstruct the full support history from Hindsight
     # so the agent sees synthesized context before the customer types.
@@ -672,6 +760,14 @@ async def websocket_session(
                     customer_id,
                     f"Agent replied: {message_text[:120]}",
                     "agent reply",
+                )
+                # Store pending reply so customer gets it on next /my/chat poll
+                sessions.add_pending_reply(
+                    customer_id,
+                    {
+                        "text": message_text,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
                 )
                 await websocket.send_json(
                     {
@@ -749,6 +845,8 @@ async def websocket_session(
             await websocket.close(code=1011, reason="Internal server error")
         except Exception:
             pass
+    finally:
+        sessions.unregister(customer_id)
 
 
 # ── Demo endpoint ────────────────────────────────────────────

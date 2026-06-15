@@ -395,6 +395,31 @@ function hideError() {
   if (banner) banner.classList.add("hidden");
 }
 
+let _agentConnected = false;
+let _pendingPollTimer = null;
+
+function startPendingPoll() {
+  if (_pendingPollTimer) clearInterval(_pendingPollTimer);
+  _pendingPollTimer = setInterval(async () => {
+    try {
+      const res = await apiFetch("/my/pending-replies");
+      if (res.ok) {
+        const data = await res.json();
+        for (const reply of data.replies || []) {
+          appendMessage("assistant", reply.text);
+        }
+        if (data.agent_disconnected) {
+          _agentConnected = false;
+          if (_pendingPollTimer) {
+            clearInterval(_pendingPollTimer);
+            _pendingPollTimer = null;
+          }
+        }
+      }
+    } catch (_) {}
+  }, 3000);
+}
+
 async function sendMessage() {
   const input = $("msgInput");
   const text = input?.value.trim();
@@ -422,7 +447,15 @@ async function sendMessage() {
 
     const data = await res.json();
     showTypingIndicator(false);
-    appendMessage("assistant", data.reply);
+
+    if (data.reply) {
+      appendMessage("assistant", data.reply);
+    }
+
+    if (data.agent_connected) {
+      _agentConnected = true;
+      startPendingPoll();
+    }
   } catch (err) {
     showTypingIndicator(false);
     showError(err.message || "Could not reach support. Please try again.");

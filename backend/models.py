@@ -118,6 +118,7 @@ class MyChatRequest(BaseModel):
 class MyChatResponse(BaseModel):
     reply: str
     suggested_solution: Optional[str] = None
+    agent_connected: bool = False
 
 
 class CreateCustomerRequest(BaseModel):
