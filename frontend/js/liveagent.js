@@ -157,29 +157,37 @@ function showTypingIndicator(show) {
 
 function showMemoryScanning(query) {
   if (!memoryPanel) return;
-  const escaped = escapeHtml(query);
+  clearInterval(memoryPanel._scanInterval);
+
   memoryPanel.innerHTML = `
     <div class="section-header">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"
+        stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+        <path d="M12 18V5m3 8a4.17 4.17 0 0 1-3-4a4.17 4.17 0 0 1-3 4
+          m8.598-6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/>
+        <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/>
+        <path d="M18 18a4 4 0 0 0 2-7.464"/>
+        <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/>
+        <path d="M6 18a4 4 0 0 1-2-7.464"/>
+        <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/>
+      </svg>
       <span>Memory Retrieval</span>
     </div>
-    <div class="memory-scanning">
-      <div class="memory-query-pill">Query: <code>"${escaped}"</code></div>
+
+    <div class="memory-scanning-card">
       <div class="scanning-dots">
         <div class="scanning-dot"></div>
         <div class="scanning-dot"></div>
         <div class="scanning-dot"></div>
       </div>
       <span class="scanning-label">Searching memory bank...</span>
+      ${query
+        ? `<div class="memory-query-pill" style="margin-top:8px">
+             Query: <code>"${escapeHtml(query)}"</code>
+           </div>`
+        : ""}
     </div>
   `;
-  const dots = memoryPanel.querySelectorAll(".scanning-dot");
-  let frame = 0;
-  const interval = setInterval(() => {
-    dots.forEach((d, i) => d.classList.toggle("active", i === frame % 3));
-    frame++;
-  }, 200);
-  memoryPanel._scanInterval = interval;
 }
 
 function renderMemoryViz(msg) {
