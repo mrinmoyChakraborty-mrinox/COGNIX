@@ -528,12 +528,13 @@
               <div class="flex items-center gap-3">
                 <div class="flex-1 bg-card border border-border rounded-lg px-4 py-2.5 flex items-center gap-2 text-muted-foreground text-sm">
                   <span style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 14px; height: 14px;" data-icon="search"><svg xmlns="http://www.w3.org/2000/svg" width="14px" height="14px" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.4285714285714284"><path d="m21 21l-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></g></svg></span>
-                  <span>Search customers or facts…</span>
+                  <input id="customer-search" type="text" placeholder="Search customers or facts…" style="background:none;border:none;outline:none;flex:1;color:var(--color-foreground);font-size:13px" />
                 </div>
-                <div class="flex gap-2">
-                  <button class="text-xs font-medium px-3 py-1.5 rounded-md border bg-danger text-danger-foreground border-danger">High frustration</button>
-                  <button class="text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border">Unresolved</button>
-                  <button class="text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border">New this week</button>
+                <div class="flex gap-2" id="filter-bar">
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border" data-filter="frustrated">High frustration</button>
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border" data-filter="unresolved">Unresolved</button>
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border" data-filter="recent">New this week</button>
+                  <button class="filter-btn text-xs font-medium px-3 py-1.5 rounded-md border bg-card text-muted-foreground border-border hidden" data-filter="all" id="clear-filter" style="display:none">Clear</button>
                 </div>
               </div>
 
@@ -591,15 +592,53 @@
             </div>
 
             <!-- Right Sidebar -->
-            <div class="w-72 flex-shrink-0 p-6 pl-0 flex flex-col gap-4">
-              <!-- Quick Actions -->
+            <div class="w-80 flex-shrink-0 p-6 pl-0 flex flex-col gap-4 overflow-y-auto" style="max-height:calc(100vh - 56px)">
+              <!-- Customer Detail (hidden until a customer is selected) -->
+              <div id="customer-detail" class="hidden flex flex-col gap-4">
+                <div class="bg-card rounded-lg border border-border p-5">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div id="detail-avatar" style="width:40px;height:40px;border-radius:50%;background:var(--color-primary);color:white;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;flex-shrink:0"></div>
+                    <div class="flex-1 min-w-0">
+                      <h2 id="detail-name" class="font-headings font-semibold text-base text-foreground truncate"></h2>
+                      <span id="detail-email" class="text-xs text-muted-foreground truncate block"></span>
+                    </div>
+                    <button id="close-detail" style="width:24px;height:24px;border:none;background:var(--color-input);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-muted-foreground);font-size:14px">&times;</button>
+                  </div>
+                  <div class="flex gap-2 mb-3">
+                    <span id="detail-frustration" class="text-xs font-semibold px-2 py-0.5 rounded-md"></span>
+                    <span id="detail-tickets" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground"></span>
+                    <span id="detail-memories" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground"></span>
+                  </div>
+                  <div id="detail-last-seen" class="text-xs text-muted-foreground"></div>
+                </div>
+
+                <!-- Memory type breakdown -->
+                <div class="bg-card rounded-lg border border-border p-5">
+                  <h3 class="font-headings font-semibold text-sm text-foreground mb-3">Memory breakdown</h3>
+                  <div id="memory-breakdown" class="flex flex-col gap-2"></div>
+                </div>
+
+                <!-- Memory timeline -->
+                <div class="bg-card rounded-lg border border-border p-5">
+                  <h3 class="font-headings font-semibold text-sm text-foreground mb-3">Recent memories</h3>
+                  <div id="memory-timeline" class="flex flex-col gap-2" style="max-height:300px;overflow-y:auto"></div>
+                </div>
+              </div>
+
+              <!-- Quick Actions (always visible) -->
               <div class="bg-card rounded-lg border border-border p-5">
                 <h2 class="font-headings font-semibold text-base text-foreground mb-3">Quick actions</h2>
                 <div class="flex flex-col gap-2">
-                  <button class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left">Run accuracy audit</button>
-                  <button class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left">Export memory snapshot</button>
-                  <button class="bg-danger text-danger-foreground text-sm font-medium px-4 py-2 rounded-md text-left">Clear low-confidence facts</button>
+                  <button id="btn-audit" class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left hover:bg-muted">Run accuracy audit</button>
+                  <button id="btn-export" class="bg-input text-foreground text-sm font-medium px-4 py-2 rounded-md text-left hover:bg-muted">Export memory snapshot</button>
+                  <button id="btn-clear" class="bg-danger text-danger-foreground text-sm font-medium px-4 py-2 rounded-md text-left hover:opacity-90">Clear low-confidence facts</button>
                 </div>
+              </div>
+
+              <!-- Audit results -->
+              <div id="audit-results" class="hidden bg-card rounded-lg border border-border p-5">
+                <h3 class="font-headings font-semibold text-sm text-foreground mb-3">Audit results</h3>
+                <div id="audit-body" class="text-xs text-muted-foreground"></div>
               </div>
             </div>
           </div>
