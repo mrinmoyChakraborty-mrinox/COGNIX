@@ -897,6 +897,10 @@ svg {
   border-radius: 4px;
   padding: 2px 8px;
   font-family: monospace;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Results state — hits fade in ────────────── */
@@ -935,6 +939,9 @@ svg {
   color: var(--color-foreground);
   margin: 0 0 3px 0;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
 }
 
 .memory-type-badge {
@@ -965,6 +972,8 @@ svg {
 
 .memory-hits {
   padding: 0 12px 12px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 /* ====================================================================
@@ -1160,6 +1169,8 @@ svg {
 .memory-graph {
   padding: 10px 12px 12px;
   border-top: 1px solid var(--color-border);
+  max-height: 180px;
+  overflow-y: auto;
 }
 .graph-legend {
   display: flex;
@@ -1181,6 +1192,7 @@ svg {
   align-items: center;
   gap: 8px;
   padding: 3px 0;
+  overflow: hidden;
 }
 .graph-dot {
   width: 8px;
@@ -1216,4 +1228,8 @@ svg {
   font-size: 11px;
   color: var(--color-foreground);
   line-height: 1.35;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

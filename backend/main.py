@@ -622,6 +622,17 @@ async def my_pending_replies(user: dict = Depends(get_current_user)):
     customer = await _resolve_customer(user)
     agent_connected = sessions.is_agent_connected(customer.id)
     replies = sessions.pop_pending_replies(customer.id)
+    logger.info(
+        "pending replies fetched | customer_id=%s | count=%d",
+        customer.id,
+        len(replies),
+    )
+    if not agent_connected:
+        logger.info(
+            "pending replies removed | customer_id=%s | agent_disconnected=%s",
+            customer.id,
+            not agent_connected,
+        )
     return {"replies": replies, "agent_disconnected": not agent_connected}
 
 
@@ -754,6 +765,8 @@ async def websocket_session(
             if not message_text:
                 continue
 
+            logger.info("WS message type=%s", msg_type)
+
             # ── Agent reply: no AI processing ────────────────
             if msg_type == "agent_reply":
                 await save_memory(
@@ -768,6 +781,11 @@ async def websocket_session(
                         "text": message_text,
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
+                )
+                logger.info(
+                    "pending replies stored | customer_id=%s | count=%d",
+                    customer_id,
+                    len(sessions._pending_replies.get(customer_id, [])),
                 )
                 await websocket.send_json(
                     {

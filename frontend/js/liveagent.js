@@ -484,15 +484,21 @@ function wireAiSuggest() {
 }
 
 function wireSend() {
+  const doSend = () => {
+    const text = replyInput.value.trim();
+    if (!text) return;
+    sendAgentReplyText(text);
+  };
+
   replyInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendCustomerMessage();
+      doSend();
     }
   });
 
   document.getElementById("sendBtn")
-    ?.addEventListener("click", sendCustomerMessage);
+    ?.addEventListener("click", doSend);
 }
 
 function escapeHtml(str) {
