@@ -134,6 +134,97 @@ def _get_agent() -> Agent:
 # ── Context builder ──────────────────────────────────────────
 
 
+def _normalize_for_dedup(text: str) -> str:
+    """Lowercase and strip common boilerplate so near-duplicates collapse."""
+    t = text.lower()
+    for boilerplate in [
+        "the customer's support case",
+        "the customer's support case (id:",
+        "the customer's support case id",
+        "the user's support case",
+        "the user's case",
+        "the customer's case",
+        "customer name is",
+        "customer email is",
+        "customer email address is",
+        "mrinmoy chakraborty",
+        "mrinmoy (customer)",
+        "mrinmoy (user)",
+        "mrinmoy chakraborty (ai agent)",
+        "mrinmoy chakraborty (ai agent) is",
+        "mrinmoy chakraborty (customer)",
+        "is an ai agent",
+    ]:
+        t = t.replace(boilerplate, "")
+    return " ".join(t.split())
+
+
+def _contract_memories(
+    memories: list[MemoryEntry], max_count: int = 12
+) -> tuple[list[MemoryEntry], str]:
+    """
+    Deduplicate, limit, and produce both a compact summary and a short detail list.
+
+    Returns:
+        (detail_list, summary_text)
+    """
+    # ── Dedup ──────────────────────────────────────────
+    seen: set[str] = set()
+    unique: list[MemoryEntry] = []
+    for m in memories:
+        norm = _normalize_for_dedup(m.content)
+        if not norm or len(norm) < 10 or norm in seen:
+            continue
+        seen.add(norm)
+        unique.append(m)
+
+    # ── Prioritise experience / observation over world_fact ───
+    priority = {"experience": 0, "observation": 1, "world_fact": 2}
+    unique.sort(key=lambda m: (priority.get(m.memory_type, 3), m.content))
+
+    # ── Build compact summary ──────────────────────────
+    issue_phrases = [
+        "loading error",
+        "account access",
+        "unable to access",
+        "unable to use",
+        "access issue",
+        "page keeps loading",
+        "post-update",
+        "after an update",
+    ]
+    escalation_phrases = [
+        "escalated",
+        "technical team",
+        "priority",
+        "actively resolving",
+        "actively working",
+    ]
+    issues: set[str] = set()
+    escalations: set[str] = set()
+    for m in unique:
+        t = m.content.lower()
+        if any(p in t for p in issue_phrases):
+            issues.add(m.content.strip())
+        if any(p in t for p in escalation_phrases):
+            escalations.add(m.content.strip())
+
+    summary_parts = []
+    if issues:
+        summary_parts.append(
+            "Issues:\n" + "\n".join(f"  - {i}" for i in list(issues)[:3])
+        )
+    if escalations:
+        summary_parts.append(
+            "Status:\n" + "\n".join(f"  - {e}" for e in list(escalations)[:2])
+        )
+    summary_text = "\n\n".join(summary_parts)
+
+    # ── Limit to max_count for the detail list ──────────
+    detail = unique[:max_count]
+    return detail, summary_text
+
+
 def _build_prompt(
     customer: Customer,
     memories: list[MemoryEntry],
@@ -144,18 +235,25 @@ def _build_prompt(
     """
     Build the full prompt sent to the LLM.
     Structured in layers: company context → customer profile →
-    retrieved memories → reflection → current message.
-    This hierarchy is what makes responses feel informed rather
-    than generic.
+    compact memory summary → key support details → reflection → current message.
     """
-    # Format memory entries
-    if memories:
+    detail_list, compact_summary = _contract_memories(memories, max_count=12)
+
+    # Format memory detail entries (short, deduplicated)
+    if detail_list:
         memory_lines = "\n".join(
             f"  [{m.memory_type.upper()}] {m.content}  (context: {m.context})"
-            for m in memories
+            for m in detail_list
         )
     else:
         memory_lines = "  No prior memories found for this customer."
+
+    # Format compact summary
+    summary_block = (
+        "\n\n=== COMPACT MEMORY SUMMARY ===\n" + compact_summary
+        if compact_summary
+        else ""
+    )
 
     # Format reflection
     reflection_text = reflection.strip() if reflection else "No reflection available."
@@ -184,7 +282,8 @@ def _build_prompt(
         "=== TICKET HISTORY ===\n"
         f"{ticket_lines}\n\n"
         "=== RETRIEVED MEMORIES (from Hindsight) ===\n"
-        f"{memory_lines}\n\n"
+        f"{memory_lines}"
+        f"{summary_block}\n\n"
         "=== HINDSIGHT REFLECTION ===\n"
         f"{reflection_text}\n\n"
         "=== CURRENT CUSTOMER MESSAGE ===\n"
@@ -338,7 +437,31 @@ async def generate_support_response(
         message[:150],
     )
     prompt = _build_prompt(customer, memories, message, reflection, tickets)
+    prompt_chars = len(prompt)
+    estimated_tokens = prompt_chars // 3
+    logger.info(
+        "PROMPT stats | customer_id=%s | chars=%d | estimated_tokens=%d",
+        customer.id,
+        prompt_chars,
+        estimated_tokens,
+    )
     logger.info("PROMPT for %s\n%s", customer.id, prompt)
+
+    # If prompt exceeds 5800 tokens, truncate to 8 memories and rebuild
+    if estimated_tokens > 5800:
+        logger.warning(
+            "Prompt too large (%d est. tokens), truncating to 8 memories | customer_id=%s",
+            estimated_tokens,
+            customer.id,
+        )
+        prompt = _build_prompt(customer, memories[:8], message, reflection, tickets)
+        prompt_chars = len(prompt)
+        estimated_tokens = prompt_chars // 3
+        logger.info(
+            "PROMPT after truncation | chars=%d | estimated_tokens=%d",
+            prompt_chars,
+            estimated_tokens,
+        )
 
     try:
         result = await _get_agent().run(prompt)
