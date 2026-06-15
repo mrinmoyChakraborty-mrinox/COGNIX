@@ -33,9 +33,10 @@ flex-direction:column;
 justify-content:center;
 }
 
-.brand h1{
-font-size:48px;
-margin-bottom:10px;
+.brand-logo-img {
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 10px;
 }
 
 .brand p{
