@@ -93,8 +93,7 @@ async function init() {
         body: JSON.stringify({ subject: "General Support" }),
       });
       if (res.ok) {
-        const ticket = await res.json();
-        tickets = [ticket];
+        tickets = await loadTickets() || [];
       }
     }
 
